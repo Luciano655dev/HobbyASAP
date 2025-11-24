@@ -32,17 +32,27 @@ export default function WhySection() {
         <div className="flex flex-col justify-between gap-4 rounded-3xl border border-white/10 bg-slate-950/85 p-4 sm:p-5">
           <div>
             <p className="mb-2 text-[11px] uppercase tracking-wide text-slate-400">
-              Made for real learners
+              Made for <strong>real learners</strong>
             </p>
-            <p className="mb-3 text-sm text-slate-200 italic">
-              “I start hobbies all the time but always quit. Seeing a little
-              quest list instead of just videos makes it feel like a game, not a
-              chore.”
-            </p>
-            <p className="text-xs text-slate-400">
-              Could be you, could be the friend who always says “I will start
-              next week”.
-            </p>
+
+            <div className="border-l-4 border-slate-700 pl-3 py-1 mb-2">
+              <p className="text-sm text-slate-200 italic mb-1">
+                “I'm not paying a new course for every skill that I want to
+                learn. This app is saving me!”
+              </p>
+              <p className="text-xs text-slate-400">
+                — Luciano Menezes, Daykeeper CEO
+              </p>
+            </div>
+            <div className="border-l-4 border-slate-700 pl-3 py-1">
+              <p className="text-sm text-slate-200 italic mb-1">
+                “This app is awesome! I'm using It everyday! And the developer
+                is a cutie :)”
+              </p>
+              <p className="text-xs text-slate-400">
+                — Sofia Jordão, My Girlfriend :)
+              </p>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-lime-300/60 bg-lime-300/10 p-3 text-xs text-lime-100">

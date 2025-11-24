@@ -11,16 +11,11 @@ export default function Hero() {
 
       {/* Left side */}
       <div className="relative z-10 max-w-xl space-y-7">
-        <div className="inline-flex items-center gap-2 rounded-full border border-lime-300/70 bg-slate-950/80 px-3 py-1 text-[11px] text-lime-100 shadow-md shadow-lime-300/40">
-          <span className="text-base">🧩</span>
-          <span>Turn hobbies into tiny quests you actually finish</span>
-        </div>
-
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Learn any hobby like
+            Learn any hobby
             <span className="block bg-gradient-to-r from-lime-300 via-sky-300 to-violet-300 bg-clip-text text-transparent">
-              As fast and easy as possible.
+              as fast and easy as possible
             </span>
           </h1>
           <p className="mt-3 text-sm text-slate-200 sm:text-base">
@@ -51,23 +46,15 @@ export default function Hero() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-300">
-          <Badge>🔥 Designed for streaks and XP</Badge>
-          <Badge>🎯 15 to 30 minute sessions</Badge>
-          <Badge>🔓 No account needed to test</Badge>
+          <span>🔥 Designed for streaks and XP</span>
+          <span>🎯 15 to 30 minute sessions</span>
+          <span>🔓 No account needed to test</span>
         </div>
       </div>
 
       {/* Right side - fake app card */}
       <div className="relative z-10 mx-auto w-full max-w-md">
         {/* top pills */}
-        <div className="absolute -right-2 -top-3 flex items-center gap-1 rounded-full bg-slate-950/90 px-3 py-1 text-[11px] text-lime-200 shadow-md shadow-lime-300/60">
-          <span className="text-base">🔥</span>
-          <span>5 day streak</span>
-        </div>
-        <div className="absolute -left-2 -bottom-3 flex items-center gap-1 rounded-full bg-violet-500/20 px-2.5 py-1 text-[11px] text-violet-100">
-          <span>⭐</span>
-          <span>+80 XP this week</span>
-        </div>
 
         <div className="rounded-[26px] border border-white/10 bg-slate-950/90 p-4 shadow-2xl shadow-slate-950/90">
           {/* header */}
@@ -190,11 +177,7 @@ function HeroTask(props: { label: string; meta: string; done?: boolean }) {
 }
 
 function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/80 px-3 py-1 text-[11px] text-slate-200 border border-white/10">
-      {children}
-    </span>
-  )
+  return <span className="">{children}</span>
 }
 
 function Chip({

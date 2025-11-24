@@ -19,3 +19,12 @@ export default function RootLayout({
     </html>
   )
 }
+
+export const metadata = {
+  title: "HobbyASAP",
+  description:
+    "AI-powered learning paths, masterclasses, quests, Levels, and streaks.",
+  icons: {
+    icon: "/logo.png",
+  },
+}

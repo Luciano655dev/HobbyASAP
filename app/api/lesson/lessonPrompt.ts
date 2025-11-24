@@ -12,7 +12,7 @@ export default function getLessonPrompt(params: {
   const label =
     kind === "masterclass"
       ? "MASTERCLASS (big picture + structured)"
-      : "IN DEPTH (zoomed in + detailed)"
+      : "IN DEPTH (explanation + how to do it)"
 
   return `
 You are HobbyASAP, an assistant that creates ultra clear, practical, COURSE-LIKE lessons for any hobby.
