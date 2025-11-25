@@ -1,6 +1,6 @@
-// app/HobbyPageClient.tsx
 "use client"
 
+import { v4 as uuidv4 } from "uuid"
 import { useEffect, useMemo, useRef, useState } from "react"
 import AskQuestionPanel, { QAItem } from "./AskQuestionPanel"
 import { HobbyPlan, Lesson, LessonKind } from "./types"
@@ -56,6 +56,28 @@ export default function HobbyPageClient() {
   // Scroll Management
   const planRef = useRef<HTMLDivElement | null>(null)
   const lessonsEndRef = useRef<HTMLDivElement | any>(null)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const KEY = "hobbyasap_user_id"
+    let userId = localStorage.getItem(KEY)
+
+    // first time here → create ID and notify backend
+    if (!userId) {
+      userId = uuidv4()
+      localStorage.setItem(KEY, userId)
+
+      // fire "newUser" metric once
+      fetch("/api/metrics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "newUser" }),
+      }).catch(() => {
+        // ignore errors, it's just analytics
+      })
+    }
+  }, [])
 
   useEffect(() => {
     if (lessons.length > 0 && lessonsEndRef.current) {

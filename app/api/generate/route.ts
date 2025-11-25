@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
-import Groq from "groq-sdk"
+import { getRedis } from "@/app/lib/redis"
 import { HobbyPlan } from "./types"
+import Groq from "groq-sdk"
 import getUserPrompt from "./userPrompt"
 
 const groq = new Groq({
@@ -76,6 +77,14 @@ export async function POST(req: Request) {
       )
     }
 
+    try {
+      const redis = getRedis()
+      if (redis) {
+        await redis.incr("metrics:prompts")
+      }
+    } catch (metricsErr) {
+      console.error("Failed to increment metrics:prompts", metricsErr)
+    }
     return NextResponse.json({ plan })
   } catch (err) {
     console.error(err)

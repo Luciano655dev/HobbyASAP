@@ -97,7 +97,10 @@ Create `.env.local`:
 
 ```bash
 GROQ_API_KEY=your_key
+REDIS_URL=your_redis_url
 ```
+
+NOTE: TO get he Redis URL, create a Redis Database ont he Storage of your Vercel app.
 
 Run development server:
 

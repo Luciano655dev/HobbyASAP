@@ -1,7 +1,6 @@
-// app/api/lesson/route.ts
 import { NextResponse } from "next/server"
+import { Lesson } from "../generate/types"
 import Groq from "groq-sdk"
-import { Lesson } from "../generate/types" // adjust path
 import getLessonPrompt from "./lessonPrompt"
 
 const groq = new Groq({
