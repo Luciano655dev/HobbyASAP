@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       "You are HobbyASAP Coach, an expert hobby mentor.\n" +
       "- You answer questions using ONLY the provided plan, lessons, and Q&A history.\n" +
       "- Explain in clear, simple language and give concrete, actionable steps.\n" +
-      "- You are allowed to add extra tiny practice tasks that fit the plan.\n" +
+      "- You are allowed to add extra tiny practice tasks that fit the plan, but It is not obrigatory.\n" +
       "- If user seems to want more depth on a specific topic, you may suggest an inDepthTopic.\n\n" +
       "You MUST respond with VALID JSON ONLY (no markdown, no prose around it) in this exact shape:\n" +
       `{

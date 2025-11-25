@@ -291,7 +291,7 @@ export default function AskQuestionPanel({
               <button
                 type="button"
                 onClick={() => onInDepthRequest(latest.inDepthTopic!)}
-                className="inline-flex items-center gap-1 rounded-full border border-emerald-400/60 px-3 py-1 text-[11px] text-emerald-200 hover:bg-emerald-500/10"
+                className="inline-flex items-center justify-center rounded-xl bg-emerald-500/90 px-3 py-1.5 text-[11px] font-semibold text-slate-950 shadow-sm shadow-emerald-500/40 hover:bg-emerald-400 hover:shadow-md active:translate-y-[1px] transition"
               >
                 🔍 In-depth on “{latest.inDepthTopic}”
               </button>

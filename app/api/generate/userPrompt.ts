@@ -1,6 +1,8 @@
 import { jsonSchemaExample } from "./jsonSchemaExample"
 
 export default function getUserPrompt(hobby: string, userLevel: string) {
+  const hobbySlug = hobby.toLowerCase().replace(/\s+/g, "+")
+
   return `
 You are HobbyASAP, an assistant that creates ultra clear, highly personalized and DETAILED learning plans for any hobby.
 
@@ -97,7 +99,15 @@ Use them like building blocks to design a mini app screen:
   - Include 5–12 resources.
   - Mix resource types where sensible:
     - "video", "article", "book", "course", "community", "search".
+  - VERY IMPORTANT URL RULES:
+    - If you are not 100% sure that a specific URL is correct and relevant, DO NOT invent it.
+    - In that case, use a SEARCH URL instead of a direct resource, for example:
+      - "https://www.youtube.com/results?search_query=beginner+${hobbySlug}"
+      - "https://www.google.com/search?q=beginner+${hobbySlug}+fundamentals"
+    - You MUST NOT output joke, meme, or troll links (especially no rickrolls).
+    - You MUST NOT output unrelated music videos or content that is not clearly about the hobby.
   - "note" must say WHY and WHEN to use the resource, 1–2 sentences.
+
 
 - "gear":
   - Use for hobbies that require equipment.
@@ -129,6 +139,12 @@ Design the sections as if you were crafting a mini learning app screen just for 
   "https://www.youtube.com/results?search_query=beginner+${encodeURIComponent(
     hobby
   )}".
+
+🔗 Resources URL rules:
+- Never output obviously fake, meme, or troll URLs.
+- Never output "https://www.youtube.com/watch?v=dQw4w9WgXcQ" or similar joke links.
+- If you are not sure about an exact URL, use a search URL instead of inventing a deep link.
+- Make sure to only return valid URLs
 
 🚫 Final rules:
 - Do NOT add extra top-level keys.

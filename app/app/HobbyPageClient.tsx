@@ -19,9 +19,13 @@ import PlanSections from "./components/PlanSections"
 import LessonsArea from "./components/LessonsArea"
 
 export default function HobbyPageClient() {
-  // basic form state
+  // basic form state (input)
   const [hobby, setHobby] = useState("")
   const [level, setLevel] = useState("complete beginner")
+
+  // frozen session meta (what goes to history)
+  const [sessionHobby, setSessionHobby] = useState<string>("")
+  const [sessionLevel, setSessionLevel] = useState<string>("")
 
   // main plan
   const [plan, setPlan] = useState<HobbyPlan | null>(null)
@@ -49,7 +53,7 @@ export default function HobbyPageClient() {
   const { history, saveSnapshot, deleteSession, clearAllSessions } =
     useSessionsHistory()
 
-  // Srcoll Management
+  // Scroll Management
   const planRef = useRef<HTMLDivElement | null>(null)
   const lessonsEndRef = useRef<HTMLDivElement | any>(null)
 
@@ -98,7 +102,7 @@ export default function HobbyPageClient() {
     return todayTasks.every((t) => completedTaskIds.includes(t.id))
   }, [plan, allTasks, completedTaskIds])
 
-  // XP stats via hook
+  // XP stats via hook (global from history)
   const xpStats = useGlobalXpStats(history)
 
   // theme + icon for header
@@ -152,6 +156,8 @@ export default function HobbyPageClient() {
       setStreak(INITIAL_STREAK)
       setSessionId(null)
       setSessionCreatedAt(null)
+      setSessionHobby("")
+      setSessionLevel("complete beginner")
     }
   }
 
@@ -164,11 +170,19 @@ export default function HobbyPageClient() {
     setStreak(INITIAL_STREAK)
     setSessionId(null)
     setSessionCreatedAt(null)
+    setSessionHobby("")
+    setSessionLevel("complete beginner")
   }
 
   function loadFromHistory(session: SavedSession) {
+    // Set input to match loaded session (nice UX)
     setHobby(session.hobby)
     setLevel(session.level)
+
+    // Freeze meta for this session (what history uses)
+    setSessionHobby(session.hobby)
+    setSessionLevel(session.level)
+
     setError("")
     setCompletedTaskIds(session.completedTaskIds)
     setPlan(session.plan)
@@ -190,8 +204,9 @@ export default function HobbyPageClient() {
     const snapshot: SavedSession = {
       id: sessionId,
       createdAt,
-      hobby,
-      level,
+      // use frozen session meta here
+      hobby: sessionHobby,
+      level: sessionLevel,
       icon: plan.icon || null,
       plan,
       completedTaskIds,
@@ -208,10 +223,10 @@ export default function HobbyPageClient() {
     streak,
     lessons,
     questions,
-    hobby,
-    level,
     sessionId,
     sessionCreatedAt,
+    sessionHobby,
+    sessionLevel,
     saveSnapshot,
   ])
 
@@ -253,6 +268,10 @@ export default function HobbyPageClient() {
       const newSessionId = `${hobby.toLowerCase()}_${Date.now()}`
       setSessionId(newSessionId)
       setSessionCreatedAt(new Date().toISOString())
+
+      // freeze the hobby/level for this session
+      setSessionHobby(hobby)
+      setSessionLevel(level)
     } catch (err: any) {
       setError(err.message || "Something went wrong.")
     } finally {

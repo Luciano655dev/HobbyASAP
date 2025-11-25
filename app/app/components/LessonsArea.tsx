@@ -107,7 +107,7 @@ export default function LessonsArea({
                             `${lesson.topic} – ${section.heading}`
                           )
                         }
-                        className="text-[10px] rounded-full border border-slate-500/60 px-2 py-0.5 text-slate-200 hover:bg-slate-800/80"
+                        className="inline-flex items-center justify-center rounded-xl bg-slate-800/90 px-3 py-1.5 text-[11px] font-semibold text-slate-50 border border-slate-600 shadow-sm hover:bg-slate-700 hover:shadow-md active:translate-y-[1px] transition"
                       >
                         More depth on this
                       </button>

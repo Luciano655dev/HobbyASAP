@@ -213,13 +213,6 @@ export default function PlanSections({
                     <div className="flex flex-wrap gap-2 pb-1 sm:pb-0">
                       <button
                         type="button"
-                        onClick={() => onOpenLesson("masterclass", item.label)}
-                        className={primaryButtonClasses}
-                      >
-                        Masterclass
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => onOpenLesson("inDepth", item.label)}
                         className={secondaryButtonClasses}
                       >
