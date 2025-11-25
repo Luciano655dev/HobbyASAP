@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { motion, type Variants } from "framer-motion"
 import type { HobbyPlan, Lesson } from "./types"
 
 export interface QATask {
@@ -31,6 +32,47 @@ interface AskQuestionPanelProps {
 
   // Hook into openLesson("inDepth", topic)
   onInDepthRequest?: (topic: string) => void
+
+  // whether a lesson (masterclass / in-depth) is currently generating
+  lessonLoading?: boolean
+}
+
+// Animations
+const panelVariants: Variants = {
+  hidden: { opacity: 0, y: 10, scale: 0.99 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.25, ease: "easeOut" },
+  },
+}
+
+const latestCardVariants: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
+}
+
+const historyListVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+}
+
+const historyItemVariants: Variants = {
+  hidden: { opacity: 0, y: 6 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.15, ease: "easeOut" },
+  },
 }
 
 // Helper to render the answer with paragraphs + simple bullets
@@ -65,14 +107,17 @@ function renderAnswer(answer: string) {
   )
 }
 
-export default function AskQuestionPanel({
-  plan,
-  lessons,
-  questions,
-  onQuestionAdded,
-  onQuestionDeleted,
-  onInDepthRequest,
-}: AskQuestionPanelProps) {
+export default function AskQuestionPanel(props: AskQuestionPanelProps) {
+  const {
+    plan,
+    lessons,
+    questions,
+    onQuestionAdded,
+    onQuestionDeleted,
+    onInDepthRequest,
+    lessonLoading = false,
+  } = props
+
   const [question, setQuestion] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -155,26 +200,36 @@ export default function AskQuestionPanel({
     }
   }
 
-  return (
-    <section className="mb-16">
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-sm sm:text-base font-semibold text-slate-50">
-              Ask a question about your plan
-            </h2>
-            <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-              Ask anything about your roadmap, tasks, or masterclasses. I’ll use
-              your current plan, lessons, and previous questions as context.
-            </p>
-          </div>
-          {!hasContext && (
-            <span className="text-[10px] px-2 py-1 rounded-full border border-slate-700 text-slate-400">
-              Generate a plan first
-            </span>
-          )}
-        </div>
+  const inDepthDisabled = (kind: "latest" | "history") =>
+    !onInDepthRequest || lessonLoading
 
+  return (
+    <section className="mb-16 space-y-4">
+      {/* Title row outside card, like LessonsArea */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm sm:text-base font-semibold text-slate-50">
+            Ask a question about your plan
+          </h2>
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+            Ask anything about your roadmap, tasks, or masterclasses. I’ll use
+            your current plan, lessons, and previous questions as context.
+          </p>
+        </div>
+        {!hasContext && (
+          <span className="text-[10px] px-2 py-1 rounded-full border border-slate-700 text-slate-400">
+            Generate a plan first
+          </span>
+        )}
+      </div>
+
+      <motion.div
+        className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md"
+        variants={panelVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+      >
         {/* Ask form */}
         <form onSubmit={handleAsk} className="flex flex-col gap-3 mb-4">
           <textarea
@@ -212,7 +267,13 @@ export default function AskQuestionPanel({
 
         {/* Latest answer – big coach card */}
         {latest && (
-          <div className="mb-5 rounded-2xl border border-emerald-500/40 bg-slate-950/90 p-4 shadow-md shadow-emerald-500/10">
+          <motion.div
+            className="mb-5 rounded-2xl border border-emerald-500/40 bg-slate-950/90 p-4 shadow-md shadow-emerald-500/10"
+            variants={latestCardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+          >
             <div className="flex items-start justify-between gap-2 mb-1">
               <div>
                 <p className="text-[11px] uppercase tracking-wide text-emerald-300 mb-1">
@@ -290,8 +351,16 @@ export default function AskQuestionPanel({
             {latest.inDepthTopic && onInDepthRequest && (
               <button
                 type="button"
-                onClick={() => onInDepthRequest(latest.inDepthTopic!)}
-                className="inline-flex items-center justify-center rounded-xl bg-emerald-500/90 px-3 py-1.5 text-[11px] font-semibold text-slate-950 shadow-sm shadow-emerald-500/40 hover:bg-emerald-400 hover:shadow-md active:translate-y-[1px] transition"
+                disabled={inDepthDisabled("latest")}
+                onClick={() =>
+                  !inDepthDisabled("latest") &&
+                  onInDepthRequest(latest.inDepthTopic!)
+                }
+                className={`inline-flex items-center justify-center rounded-xl bg-emerald-500/90 px-3 py-1.5 text-[11px] font-semibold text-slate-950 shadow-sm shadow-emerald-500/40 hover:bg-emerald-400 hover:shadow-md active:translate-y-[1px] transition ${
+                  inDepthDisabled("latest")
+                    ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-emerald-500/90 hover:shadow-sm"
+                    : ""
+                }`}
               >
                 🔍 In-depth on “{latest.inDepthTopic}”
               </button>
@@ -304,7 +373,7 @@ export default function AskQuestionPanel({
               })}{" "}
               · {new Date(latest.createdAt).toLocaleDateString()}
             </p>
-          </div>
+          </motion.div>
         )}
 
         {/* Q&A history list (older ones) */}
@@ -313,11 +382,18 @@ export default function AskQuestionPanel({
             <h3 className="text-xs sm:text-sm font-semibold text-slate-100 mb-2">
               Previous questions
             </h3>
-            <div className="space-y-3 max-h-52 overflow-y-auto pr-1">
+            <motion.div
+              className="space-y-3 max-h-52 overflow-y-auto pr-1"
+              variants={historyListVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+            >
               {older.map((item) => (
-                <div
+                <motion.div
                   key={item.id}
                   className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3 text-xs sm:text-sm"
+                  variants={historyItemVariants}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <p className="text-slate-100 font-medium">
@@ -381,8 +457,16 @@ export default function AskQuestionPanel({
                   {item.inDepthTopic && onInDepthRequest && (
                     <button
                       type="button"
-                      onClick={() => onInDepthRequest(item.inDepthTopic!)}
-                      className="mt-1 inline-flex items-center gap-1 rounded-full border border-slate-600 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800/80"
+                      disabled={inDepthDisabled("history")}
+                      onClick={() =>
+                        !inDepthDisabled("history") &&
+                        onInDepthRequest(item.inDepthTopic!)
+                      }
+                      className={`mt-1 inline-flex items-center gap-1 rounded-full border border-slate-600 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800/80 ${
+                        inDepthDisabled("history")
+                          ? "opacity-50 cursor-not-allowed hover:bg-slate-950"
+                          : ""
+                      }`}
                     >
                       In-depth on “{item.inDepthTopic}”
                     </button>
@@ -395,9 +479,9 @@ export default function AskQuestionPanel({
                     })}{" "}
                     · {new Date(item.createdAt).toLocaleDateString()}
                   </p>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         )}
 
@@ -408,7 +492,7 @@ export default function AskQuestionPanel({
             tasks and an in-depth suggestion.
           </p>
         )}
-      </div>
+      </motion.div>
     </section>
   )
 }

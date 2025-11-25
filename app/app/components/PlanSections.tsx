@@ -1,4 +1,6 @@
-// app/components/PlanSections.tsx
+"use client"
+
+import { motion, type Variants } from "framer-motion"
 import {
   HobbyPlan,
   PlanSection,
@@ -19,6 +21,7 @@ interface PlanSectionsProps {
   completedTaskIds: string[]
   onToggleTask: (id: string) => void
   onOpenLesson: (kind: "masterclass" | "inDepth", topic: string) => void
+  lessonLoading: boolean
 }
 
 const primaryButtonClasses =
@@ -26,20 +29,58 @@ const primaryButtonClasses =
 const secondaryButtonClasses =
   "inline-flex items-center justify-center rounded-xl bg-slate-800/90 px-3 py-1.5 text-[11px] font-semibold text-slate-50 border border-slate-600 shadow-sm hover:bg-slate-700 hover:shadow-md active:translate-y-[1px] transition"
 
+// animation for each section card
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 12, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.25,
+      ease: "easeOut",
+    },
+  },
+}
+
+// for lists of tasks
+const listVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+}
+
+const listItemVariants: Variants = {
+  hidden: { opacity: 0, y: 6 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
+}
+
 export default function PlanSections({
   plan,
   completedTaskIds,
   onToggleTask,
   onOpenLesson,
+  lessonLoading,
 }: PlanSectionsProps) {
   function renderSection(section: PlanSection) {
     switch (section.kind) {
       case "intro": {
         const s = section as IntroSection
         return (
-          <div
+          <motion.div
             key={s.id}
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
           >
             <h3 className="text-base font-semibold mb-2 text-slate-50">
               {s.title}
@@ -55,16 +96,20 @@ export default function PlanSections({
                 ))}
               </ul>
             )}
-          </div>
+          </motion.div>
         )
       }
 
       case "roadmap": {
         const s = section as RoadmapSection
         return (
-          <div
+          <motion.div
             key={s.id}
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
           >
             <h3 className="text-base font-semibold mb-2 text-slate-50">
               {s.title}
@@ -119,19 +164,31 @@ export default function PlanSections({
                         <div className="mt-1 flex flex-wrap gap-2">
                           <button
                             type="button"
+                            disabled={lessonLoading}
                             onClick={() =>
+                              !lessonLoading &&
                               onOpenLesson("masterclass", p.focus.join(", "))
                             }
-                            className={primaryButtonClasses}
+                            className={`${primaryButtonClasses} ${
+                              lessonLoading
+                                ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-emerald-500/90 hover:shadow-sm"
+                                : ""
+                            }`}
                           >
                             Phase masterclass
                           </button>
                           <button
                             type="button"
+                            disabled={lessonLoading}
                             onClick={() =>
+                              !lessonLoading &&
                               onOpenLesson("inDepth", p.focus.join(", "))
                             }
-                            className={secondaryButtonClasses}
+                            className={`${secondaryButtonClasses} ${
+                              lessonLoading
+                                ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-slate-800/90 hover:shadow-sm"
+                                : ""
+                            }`}
                           >
                             Phase in depth
                           </button>
@@ -142,16 +199,20 @@ export default function PlanSections({
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         )
       }
 
       case "today": {
         const s = section as TodaySection
         return (
-          <div
+          <motion.div
             key={s.id}
             className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-5 shadow-md shadow-emerald-500/10"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
           >
             <h3 className="text-base font-semibold mb-1.5 text-emerald-300 flex items-center gap-1.5">
               <span>{s.title}</span>
@@ -162,18 +223,25 @@ export default function PlanSections({
             {s.description && (
               <p className="text-[11px] text-slate-400 mb-3">{s.description}</p>
             )}
-            <ul className="space-y-3 text-sm">
+            <motion.ul
+              className="space-y-3 text-sm"
+              variants={listVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+            >
               {s.items.map((item, index) => {
                 const id = buildTaskId(s.id, index, item.label)
                 const checked = completedTaskIds.includes(id)
                 return (
-                  <li
+                  <motion.li
                     key={id}
                     className={`flex flex-col sm:flex-row sm:items-start gap-3 rounded-2xl px-3 py-2.5 border transition-colors ${
                       checked
                         ? "border-emerald-400/60 bg-emerald-500/10"
                         : "border-slate-700 bg-slate-950/70 hover:border-emerald-400/60"
                     }`}
+                    variants={listItemVariants}
                   >
                     <div className="flex items-start gap-3 flex-1">
                       <input
@@ -213,26 +281,37 @@ export default function PlanSections({
                     <div className="flex flex-wrap gap-2 pb-1 sm:pb-0">
                       <button
                         type="button"
-                        onClick={() => onOpenLesson("inDepth", item.label)}
-                        className={secondaryButtonClasses}
+                        disabled={lessonLoading}
+                        onClick={() =>
+                          !lessonLoading && onOpenLesson("inDepth", item.label)
+                        }
+                        className={`${secondaryButtonClasses} ${
+                          lessonLoading
+                            ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-slate-800/90 hover:shadow-sm"
+                            : ""
+                        }`}
                       >
                         In depth
                       </button>
                     </div>
-                  </li>
+                  </motion.li>
                 )
               })}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
         )
       }
 
       case "checklist": {
         const s = section as ChecklistSection
         return (
-          <div
+          <motion.div
             key={s.id}
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
           >
             <h3 className="text-base font-semibold mb-1.5 text-slate-50">
               {s.title}
@@ -240,18 +319,25 @@ export default function PlanSections({
             {s.description && (
               <p className="text-[11px] text-slate-400 mb-3">{s.description}</p>
             )}
-            <ul className="space-y-3 text-sm max-h-80 overflow-auto pr-1">
+            <motion.ul
+              className="space-y-3 text-sm max-h-80 overflow-auto pr-1"
+              variants={listVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+            >
               {s.items.map((item, index) => {
                 const id = buildTaskId(s.id, index, item.label)
                 const checked = completedTaskIds.includes(id)
                 return (
-                  <li
+                  <motion.li
                     key={id}
                     className={`flex flex-col sm:flex-row sm:items-start gap-3 rounded-2xl px-3 py-2.5 border transition-colors ${
                       checked
                         ? "border-slate-700 bg-slate-950/70"
                         : "border-slate-800 bg-slate-950/80 hover:border-emerald-400/60"
                     }`}
+                    variants={listItemVariants}
                   >
                     <div className="flex items-start gap-3 flex-1">
                       <input
@@ -291,26 +377,37 @@ export default function PlanSections({
                     <div className="flex flex-wrap gap-2 pb-1 sm:pb-0">
                       <button
                         type="button"
-                        onClick={() => onOpenLesson("inDepth", item.label)}
-                        className={secondaryButtonClasses}
+                        disabled={lessonLoading}
+                        onClick={() =>
+                          !lessonLoading && onOpenLesson("inDepth", item.label)
+                        }
+                        className={`${secondaryButtonClasses} ${
+                          lessonLoading
+                            ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-slate-800/90 hover:shadow-sm"
+                            : ""
+                        }`}
                       >
                         In depth
                       </button>
                     </div>
-                  </li>
+                  </motion.li>
                 )
               })}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
         )
       }
 
       case "weekly": {
         const s = section as WeeklySection
         return (
-          <div
+          <motion.div
             key={s.id}
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
           >
             <h3 className="text-base font-semibold mb-2 text-slate-50">
               {s.title}
@@ -343,15 +440,29 @@ export default function PlanSections({
                   <div className="mt-1 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => onOpenLesson("masterclass", w.focus)}
-                      className={primaryButtonClasses}
+                      disabled={lessonLoading}
+                      onClick={() =>
+                        !lessonLoading && onOpenLesson("masterclass", w.focus)
+                      }
+                      className={`${primaryButtonClasses} ${
+                        lessonLoading
+                          ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-emerald-500/90 hover:shadow-sm"
+                          : ""
+                      }`}
                     >
                       Week masterclass
                     </button>
                     <button
                       type="button"
-                      onClick={() => onOpenLesson("inDepth", w.focus)}
-                      className={secondaryButtonClasses}
+                      disabled={lessonLoading}
+                      onClick={() =>
+                        !lessonLoading && onOpenLesson("inDepth", w.focus)
+                      }
+                      className={`${secondaryButtonClasses} ${
+                        lessonLoading
+                          ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-slate-800/90 hover:shadow-sm"
+                          : ""
+                      }`}
                     >
                       Week in depth
                     </button>
@@ -359,16 +470,20 @@ export default function PlanSections({
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )
       }
 
       case "resources": {
         const s = section as ResourcesSection
         return (
-          <div
+          <motion.div
             key={s.id}
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
           >
             <h3 className="text-base font-semibold mb-2 text-slate-50">
               {s.title}
@@ -404,16 +519,20 @@ export default function PlanSections({
                 </li>
               ))}
             </ul>
-          </div>
+          </motion.div>
         )
       }
 
       case "gear": {
         const s = section as GearSection
         return (
-          <div
+          <motion.div
             key={s.id}
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
           >
             <h3 className="text-base font-semibold mb-2 text-slate-50">
               {s.title}
@@ -453,16 +572,20 @@ export default function PlanSections({
                 </ul>
               </div>
             </div>
-          </div>
+          </motion.div>
         )
       }
 
       case "tips": {
         const s = section as TipsSection
         return (
-          <div
+          <motion.div
             key={s.id}
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
           >
             <h3 className="text-base font-semibold mb-2 text-slate-50">
               {s.title}
@@ -483,16 +606,20 @@ export default function PlanSections({
                 </li>
               ))}
             </ul>
-          </div>
+          </motion.div>
         )
       }
 
       case "advanced": {
         const s = section as AdvancedSection
         return (
-          <div
+          <motion.div
             key={s.id}
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md"
+            variants={cardVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
           >
             <h3 className="text-base font-semibold mb-2 text-slate-50">
               {s.title}
@@ -522,7 +649,7 @@ export default function PlanSections({
                 </ul>
               </div>
             </div>
-          </div>
+          </motion.div>
         )
       }
 

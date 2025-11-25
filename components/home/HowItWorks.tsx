@@ -1,8 +1,54 @@
+"use client"
+
+import { motion, type Variants } from "framer-motion"
+
+// section fades in when scrolled into view
+const sectionVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+}
+
+// grid staggers the step cards
+const gridVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+// each step card pops in
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 15, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.35,
+      ease: "easeOut",
+    },
+  },
+}
+
 export default function HowItWorks() {
   return (
-    <section
+    <motion.section
       id="how-it-works"
       className="mx-auto max-w-6xl px-4 pb-12 pt-2 sm:pb-16"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.3 }} // only when user reaches this section
+      variants={sectionVariants}
     >
       <div className="mb-7 text-center">
         <h2 className="text-xl font-semibold sm:text-2xl">
@@ -14,7 +60,7 @@ export default function HowItWorks() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <motion.div className="grid gap-4 md:grid-cols-3" variants={gridVariants}>
         <StepCard
           step="1"
           title="Type your hobby and level"
@@ -36,8 +82,8 @@ export default function HowItWorks() {
           pill="Deep dive mode"
           color="violet"
         />
-      </div>
-    </section>
+      </motion.div>
+    </motion.section>
   )
 }
 
@@ -66,7 +112,12 @@ function StepCard(props: {
   const c = colorMap[props.color]
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-950/80 p-4 shadow-sm shadow-slate-950/80">
+    <motion.div
+      className="rounded-3xl border border-white/10 bg-slate-950/80 p-4 shadow-sm shadow-slate-950/80"
+      variants={cardVariants}
+      whileHover={{ y: -4, scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+    >
       <div className="mb-3 flex items-center justify-between">
         <div
           className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${c.circle}`}
@@ -83,6 +134,6 @@ function StepCard(props: {
         {props.title}
       </h3>
       <p className="text-xs text-slate-300">{props.text}</p>
-    </div>
+    </motion.div>
   )
 }

@@ -1,5 +1,7 @@
-// app/components/LessonsArea.tsx
+"use client"
+
 import type { RefObject } from "react"
+import { motion, type Variants } from "framer-motion"
 import { Lesson } from "../types"
 import buildTaskId from "../helpers/buildTaskId"
 
@@ -12,7 +14,60 @@ interface LessonsAreaProps {
   onToggleTask: (id: string) => void
   onRemoveLesson: (index: number) => void
   onOpenLesson: (kind: "masterclass" | "inDepth", topic: string) => void
-  lessonsEndRef: RefObject<HTMLDivElement>
+  lessonsEndRef: RefObject<HTMLDivElement | null>
+}
+
+// whole lesson card
+const lessonCardVariants: Variants = {
+  hidden: { opacity: 0, y: 12, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.25,
+      ease: "easeOut",
+    },
+  },
+}
+
+// inner sections list
+const sectionsListVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.06,
+    },
+  },
+}
+
+// each inner section card
+const sectionCardVariants: Variants = {
+  hidden: { opacity: 0, y: 6 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
+}
+
+// practice tasks list
+const practiceListVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+}
+
+const practiceItemVariants: Variants = {
+  hidden: { opacity: 0, y: 6 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
 }
 
 export default function LessonsArea({
@@ -56,9 +111,13 @@ export default function LessonsArea({
         {lessons.map((lesson, lessonIndex) => {
           const lessonKey = `${lesson.kind}-${lesson.topic}-${lessonIndex}`
           return (
-            <div
+            <motion.div
               key={lessonKey}
               className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-md"
+              variants={lessonCardVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.35 }} // only when this lesson scrolls into view
             >
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
                 <div>
@@ -89,11 +148,15 @@ export default function LessonsArea({
 
               <p className="text-sm text-slate-200 mb-4">{lesson.summary}</p>
 
-              <div className="space-y-4 mb-4">
+              <motion.div
+                className="space-y-4 mb-4"
+                variants={sectionsListVariants}
+              >
                 {lesson.sections.map((section, sectionIndex) => (
-                  <div
+                  <motion.div
                     key={`${lessonKey}-section-${sectionIndex}`}
                     className="border border-slate-800 rounded-2xl p-3 bg-slate-950/80"
+                    variants={sectionCardVariants}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <h4 className="text-sm font-medium text-slate-100">
@@ -101,13 +164,19 @@ export default function LessonsArea({
                       </h4>
                       <button
                         type="button"
+                        disabled={lessonLoading}
                         onClick={() =>
+                          !lessonLoading &&
                           onOpenLesson(
                             "inDepth",
                             `${lesson.topic} – ${section.heading}`
                           )
                         }
-                        className="inline-flex items-center justify-center rounded-xl bg-slate-800/90 px-3 py-1.5 text-[11px] font-semibold text-slate-50 border border-slate-600 shadow-sm hover:bg-slate-700 hover:shadow-md active:translate-y-[1px] transition"
+                        className={`inline-flex items-center justify-center rounded-xl bg-slate-800/90 px-3 py-1.5 text-[11px] font-semibold text-slate-50 border border-slate-600 shadow-sm hover:bg-slate-700 hover:shadow-md active:translate-y-[1px] transition ${
+                          lessonLoading
+                            ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-slate-800/90 hover:shadow-sm"
+                            : ""
+                        }`}
                       >
                         More depth on this
                       </button>
@@ -139,12 +208,18 @@ export default function LessonsArea({
                         </ul>
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
               {lesson.practiceIdeas && lesson.practiceIdeas.length > 0 && (
-                <div className="mb-4">
+                <motion.div
+                  className="mb-4"
+                  variants={practiceListVariants}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.3 }}
+                >
                   <h4 className="text-sm font-medium text-emerald-200 mb-2">
                     Practice tasks for this lesson
                   </h4>
@@ -157,13 +232,14 @@ export default function LessonsArea({
                       )
                       const checked = completedTaskIds.includes(id)
                       return (
-                        <li
+                        <motion.li
                           key={id}
                           className={`flex items-start gap-3 rounded-2xl px-3 py-2 border text-xs sm:text-sm ${
                             checked
                               ? "border-emerald-400/60 bg-emerald-500/10"
                               : "border-slate-700 bg-slate-950/70 hover:border-emerald-400/60"
                           }`}
+                          variants={practiceItemVariants}
                         >
                           <input
                             type="checkbox"
@@ -180,11 +256,11 @@ export default function LessonsArea({
                           >
                             {idea}
                           </p>
-                        </li>
+                        </motion.li>
                       )
                     })}
                   </ul>
-                </div>
+                </motion.div>
               )}
 
               {lesson.recommendedResources &&
@@ -215,7 +291,7 @@ export default function LessonsArea({
                     </ul>
                   </div>
                 )}
-            </div>
+            </motion.div>
           )
         })}
         {/* Scroll target for the bottom */}

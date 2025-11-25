@@ -1,4 +1,7 @@
 // app/components/HistoryPanel.tsx
+"use client"
+
+import { motion } from "framer-motion"
 import { SavedSession } from "../hooks/useSessionsHistory"
 
 interface HistoryPanelProps {
@@ -15,7 +18,12 @@ export default function HistoryPanel({
   onLoad,
 }: HistoryPanelProps) {
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md">
+    <motion.div
+      className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md"
+      initial={{ opacity: 0, y: 10, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    >
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm sm:text-base font-semibold text-slate-50">
           Saved runs
@@ -88,6 +96,6 @@ export default function HistoryPanel({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { v4 as uuidv4 } from "uuid"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { motion, type Variants } from "framer-motion"
 import AskQuestionPanel, { QAItem } from "./AskQuestionPanel"
 import { HobbyPlan, Lesson, LessonKind } from "./types"
 import buildTaskId from "./helpers/buildTaskId"
@@ -17,6 +18,26 @@ import HistoryPanel from "./components/HistoryPanel"
 import PlanHeader from "./components/PlanHeader"
 import PlanSections from "./components/PlanSections"
 import LessonsArea from "./components/LessonsArea"
+
+// Animations for the main layout + form
+const layoutVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.25, ease: "easeOut" },
+  },
+}
+
+const formVariants: Variants = {
+  hidden: { opacity: 0, y: 10, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.25, ease: "easeOut", delay: 0.05 },
+  },
+}
 
 export default function HobbyPageClient() {
   // basic form state (input)
@@ -55,7 +76,9 @@ export default function HobbyPageClient() {
 
   // Scroll Management
   const planRef = useRef<HTMLDivElement | null>(null)
-  const lessonsEndRef = useRef<HTMLDivElement | any>(null)
+  const lessonsEndRef = useRef<HTMLDivElement | null>(null)
+  const prevLessonsLengthRef = useRef(0)
+  const suppressNextScrollRef = useRef(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -79,13 +102,27 @@ export default function HobbyPageClient() {
     }
   }, [])
 
+  // Scroll only when a NEW lesson is added via openLesson, not when loading history
   useEffect(() => {
-    if (lessons.length > 0 && lessonsEndRef.current) {
+    const prevLength = prevLessonsLengthRef.current
+    const currentLength = lessons.length
+
+    // If we just loaded from history, skip this scroll once
+    if (suppressNextScrollRef.current) {
+      suppressNextScrollRef.current = false
+      prevLessonsLengthRef.current = currentLength
+      return
+    }
+
+    // Only scroll when the number of lessons increased (new lesson appended)
+    if (currentLength > prevLength && lessonsEndRef.current) {
       lessonsEndRef.current.scrollIntoView({
         behavior: "smooth",
         block: "end",
       })
     }
+
+    prevLessonsLengthRef.current = currentLength
   }, [lessons.length])
 
   // all tasks helper
@@ -197,6 +234,9 @@ export default function HobbyPageClient() {
   }
 
   function loadFromHistory(session: SavedSession) {
+    // Prevent the scroll effect from firing when we load lessons from history
+    suppressNextScrollRef.current = true
+
     // Set input to match loaded session (nice UX)
     setHobby(session.hobby)
     setLevel(session.level)
@@ -375,11 +415,17 @@ export default function HobbyPageClient() {
         <Hero streak={streak} xpStats={xpStats} />
 
         {/* Input + history */}
-        <section className="mb-8 grid gap-5 md:grid-cols-[minmax(0,1.5fr),minmax(0,1fr)]">
+        <motion.section
+          className="mb-8 grid gap-5 md:grid-cols-[minmax(0,1.5fr),minmax(0,1fr)]"
+          variants={layoutVariants}
+          initial="hidden"
+          animate="visible" // <— changed from whileInView to animate
+        >
           {/* Form */}
-          <form
+          <motion.form
             onSubmit={handleSubmit}
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col gap-4 shadow-md"
+            variants={formVariants}
           >
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 space-y-1">
@@ -424,7 +470,7 @@ export default function HobbyPageClient() {
                 {error}
               </p>
             )}
-          </form>
+          </motion.form>
 
           {/* History (full session reload) */}
           <HistoryPanel
@@ -433,7 +479,7 @@ export default function HobbyPageClient() {
             onDelete={handleDeleteHistoryItem}
             onLoad={loadFromHistory}
           />
-        </section>
+        </motion.section>
 
         {/* Plan header */}
         {plan && (
@@ -455,6 +501,7 @@ export default function HobbyPageClient() {
             completedTaskIds={completedTaskIds}
             onToggleTask={toggleTask}
             onOpenLesson={openLesson}
+            lessonLoading={lessonLoading}
           />
         )}
 
@@ -466,6 +513,19 @@ export default function HobbyPageClient() {
             ask follow-up questions.
           </p>
         )}
+
+        {/* Ask questions */}
+        {plan ? (
+          <AskQuestionPanel
+            plan={plan}
+            lessons={lessons}
+            questions={questions}
+            onQuestionAdded={handleQuestionAdded}
+            onQuestionDeleted={handleQuestionDeleted}
+            onInDepthRequest={(topic) => openLesson("inDepth", topic)}
+            lessonLoading={lessonLoading}
+          />
+        ) : null}
 
         {/* Lessons area */}
         {plan && (
@@ -481,18 +541,6 @@ export default function HobbyPageClient() {
             lessonsEndRef={lessonsEndRef}
           />
         )}
-
-        {/* Ask questions */}
-        {plan ? (
-          <AskQuestionPanel
-            plan={plan}
-            lessons={lessons}
-            questions={questions}
-            onQuestionAdded={handleQuestionAdded}
-            onQuestionDeleted={handleQuestionDeleted}
-            onInDepthRequest={(topic) => openLesson("inDepth", topic)}
-          />
-        ) : null}
       </div>
     </main>
   )
