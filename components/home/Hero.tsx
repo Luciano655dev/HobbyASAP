@@ -15,7 +15,7 @@ export default function Hero() {
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
             Learn any hobby
             <span className="block bg-gradient-to-r from-lime-300 via-sky-300 to-violet-300 bg-clip-text text-transparent">
-              as fast and easy as possible
+              as fast and as easily as possible
             </span>
           </h1>
           <p className="mt-3 text-sm text-slate-200 sm:text-base">
