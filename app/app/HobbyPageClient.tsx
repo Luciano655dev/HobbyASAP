@@ -40,6 +40,9 @@ const formVariants: Variants = {
 }
 
 export default function HobbyPageClient() {
+  // language state (EN / PT)
+  const [language, setLanguage] = useState<"en" | "pt">("en")
+
   // basic form state (input)
   const [hobby, setHobby] = useState("")
   const [level, setLevel] = useState("complete beginner")
@@ -80,13 +83,14 @@ export default function HobbyPageClient() {
   const prevLessonsLengthRef = useRef(0)
   const suppressNextScrollRef = useRef(false)
 
+  // ---- Init: user id + language from localStorage ----
   useEffect(() => {
     if (typeof window === "undefined") return
 
+    // user id
     const KEY = "hobbyasap_user_id"
     let userId = localStorage.getItem(KEY)
 
-    // first time here → create ID and notify backend
     if (!userId) {
       userId = uuidv4()
       localStorage.setItem(KEY, userId)
@@ -100,6 +104,15 @@ export default function HobbyPageClient() {
         // ignore errors, it's just analytics
       })
     }
+
+    // language preference
+    const savedLang = localStorage.getItem("hobbyasap_lang") as
+      | "en"
+      | "pt"
+      | null
+    if (savedLang === "en" || savedLang === "pt") {
+      setLanguage(savedLang)
+    }
   }, [])
 
   // Scroll only when a NEW lesson is added via openLesson, not when loading history
@@ -107,14 +120,12 @@ export default function HobbyPageClient() {
     const prevLength = prevLessonsLengthRef.current
     const currentLength = lessons.length
 
-    // If we just loaded from history, skip this scroll once
     if (suppressNextScrollRef.current) {
       suppressNextScrollRef.current = false
       prevLessonsLengthRef.current = currentLength
       return
     }
 
-    // Only scroll when the number of lessons increased (new lesson appended)
     if (currentLength > prevLength && lessonsEndRef.current) {
       lessonsEndRef.current.scrollIntoView({
         behavior: "smooth",
@@ -175,7 +186,7 @@ export default function HobbyPageClient() {
 
     setStreak((prev) => {
       if (prev.lastActiveDate === todayStr) {
-        return prev // already counted today
+        return prev
       }
 
       let newCurrent = 1
@@ -207,7 +218,6 @@ export default function HobbyPageClient() {
     deleteSession(id)
 
     if (id === sessionId) {
-      // reset current view if deleting active session
       setPlan(null)
       setCompletedTaskIds([])
       setLessons([])
@@ -234,14 +244,10 @@ export default function HobbyPageClient() {
   }
 
   function loadFromHistory(session: SavedSession) {
-    // Prevent the scroll effect from firing when we load lessons from history
     suppressNextScrollRef.current = true
 
-    // Set input to match loaded session (nice UX)
     setHobby(session.hobby)
     setLevel(session.level)
-
-    // Freeze meta for this session (what history uses)
     setSessionHobby(session.hobby)
     setSessionLevel(session.level)
 
@@ -266,7 +272,6 @@ export default function HobbyPageClient() {
     const snapshot: SavedSession = {
       id: sessionId,
       createdAt,
-      // use frozen session meta here
       hobby: sessionHobby,
       level: sessionLevel,
       icon: plan.icon || null,
@@ -292,6 +297,14 @@ export default function HobbyPageClient() {
     saveSnapshot,
   ])
 
+  // ---- Language toggle handler ----
+  function handleLanguageChange(next: "en" | "pt") {
+    setLanguage(next)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("hobbyasap_lang", next)
+    }
+  }
+
   // ---- API / form ----
 
   async function handleSubmit(e: React.FormEvent) {
@@ -315,7 +328,7 @@ export default function HobbyPageClient() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hobby, level }),
+        body: JSON.stringify({ hobby, level, language }),
       })
 
       if (!res.ok) {
@@ -331,7 +344,6 @@ export default function HobbyPageClient() {
       setSessionId(newSessionId)
       setSessionCreatedAt(new Date().toISOString())
 
-      // freeze the hobby/level for this session
       setSessionHobby(hobby)
       setSessionLevel(level)
     } catch (err: any) {
@@ -344,10 +356,8 @@ export default function HobbyPageClient() {
   function toggleTask(id: string) {
     setCompletedTaskIds((prev) => {
       if (prev.includes(id)) {
-        // unchecking
         return prev.filter((x) => x !== id)
       } else {
-        // checking
         updateStreakOnTaskCheck()
         return [...prev, id]
       }
@@ -371,6 +381,7 @@ export default function HobbyPageClient() {
           level: plan.level,
           kind,
           topic,
+          language,
         }),
       })
 
@@ -419,7 +430,7 @@ export default function HobbyPageClient() {
           className="mb-8 grid gap-5 md:grid-cols-[minmax(0,1.5fr),minmax(0,1fr)]"
           variants={layoutVariants}
           initial="hidden"
-          animate="visible" // <— changed from whileInView to animate
+          animate="visible"
         >
           {/* Form */}
           <motion.form
@@ -427,6 +438,40 @@ export default function HobbyPageClient() {
             className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col gap-4 shadow-md"
             variants={formVariants}
           >
+            {/* Top row: title + language toggle */}
+            <div className="flex items-center justify-between gap-3 mb-1">
+              <h2 className="text-sm font-semibold text-slate-100">
+                Design your hobby plan
+              </h2>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400">Language</span>
+                <div className="inline-flex items-center rounded-full bg-slate-800 p-1 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => handleLanguageChange("en")}
+                    className={`px-2.5 py-1 rounded-full transition-colors ${
+                      language === "en"
+                        ? "bg-slate-950 text-emerald-400"
+                        : "text-slate-300"
+                    }`}
+                  >
+                    EN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLanguageChange("pt")}
+                    className={`px-2.5 py-1 rounded-full transition-colors ${
+                      language === "pt"
+                        ? "bg-slate-950 text-emerald-400"
+                        : "text-slate-300"
+                    }`}
+                  >
+                    PT
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 space-y-1">
                 <label className="text-[11px] font-semibold text-slate-300">

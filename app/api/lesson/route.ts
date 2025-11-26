@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { Lesson } from "../generate/types"
 import Groq from "groq-sdk"
 import getLessonPrompt from "./lessonPrompt"
+import getSystemPrompt from "../getSystemPrompt"
 import {
   checkGlobalTokenBudget,
   addGlobalTokens,
@@ -14,7 +15,7 @@ const groq = new Groq({
 
 export async function POST(req: Request) {
   try {
-    const { hobby, level, kind, topic } = await req.json()
+    const { hobby, level, kind, topic, language } = await req.json()
 
     if (!hobby || typeof hobby !== "string") {
       return NextResponse.json({ error: "Hobby is required." }, { status: 400 })
@@ -46,9 +47,8 @@ export async function POST(req: Request) {
     const userLevel =
       typeof level === "string" && level.trim() ? level : "complete beginner"
 
-    const systemPrompt =
-      "You are HobbyASAP, an AI that creates ultra clear, COURSE-LIKE lessons for hobby learners. " +
-      "You ALWAYS respond with VALID JSON only. No markdown, no code fences, no comments."
+    const lang = language === "pt" ? "pt" : "en"
+    const systemPrompt: any = getSystemPrompt(lang)
 
     const userPrompt = getLessonPrompt({
       hobby,

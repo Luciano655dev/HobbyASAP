@@ -153,6 +153,8 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
 
     setLoading(true)
     try {
+      const language = localStorage.getItem("hobbyasap_lang") ?? "en"
+
       const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -160,6 +162,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
           question: question.trim(),
           plan,
           lessons,
+          language,
           // send history as simple Q/A pairs for context
           history: questions.map((item) => ({
             question: item.question,

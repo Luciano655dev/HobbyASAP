@@ -4,6 +4,7 @@ import { getRedis } from "@/app/lib/redis"
 import { HobbyPlan } from "./types"
 import Groq from "groq-sdk"
 import getUserPrompt from "./userPrompt"
+import getSystemPrompt from "../getSystemPrompt"
 import {
   checkGlobalTokenBudget,
   addGlobalTokens,
@@ -15,7 +16,7 @@ const groq = new Groq({
 
 export async function POST(req: Request) {
   try {
-    const { hobby, level } = await req.json()
+    const { hobby, level, language } = await req.json()
 
     if (!hobby || typeof hobby !== "string") {
       return NextResponse.json({ error: "Hobby is required" }, { status: 400 })
@@ -36,9 +37,8 @@ export async function POST(req: Request) {
     const userLevel =
       typeof level === "string" && level.trim() ? level : "complete beginner"
 
-    const systemPrompt =
-      "You are HobbyASAP, an AI that creates ultra clear, structured learning plans for any hobby. " +
-      "You ALWAYS respond with VALID JSON only. No markdown, no code fences, no comments."
+    const lang = language === "pt" ? "pt" : "en"
+    const systemPrompt = getSystemPrompt(lang)
 
     const userPrompt = getUserPrompt(hobby, userLevel)
 
