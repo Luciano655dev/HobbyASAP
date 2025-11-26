@@ -2,6 +2,10 @@
 import { NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import type { HobbyPlan, Lesson } from "../generate/types"
+import {
+  checkGlobalTokenBudget,
+  addGlobalTokens,
+} from "@/app/lib/groqGlobalLimit"
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -49,6 +53,18 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Server misconfiguration: missing GROQ_API_KEY." },
         { status: 500 }
+      )
+    }
+
+    // === GLOBAL TOKEN LIMIT CHECK ===
+    const budget: any = await checkGlobalTokenBudget()
+    if (!budget.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            "HobbyASAP has reached today's AI usage limit. Please try again tomorrow.",
+        },
+        { status: 429 }
       )
     }
 
@@ -103,6 +119,11 @@ export async function POST(req: Request) {
       max_tokens: 800,
     })
 
+    // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
+    const usage = (completion as any).usage
+    const usedTokens: number = usage?.total_tokens ?? 0
+    await addGlobalTokens(budget.redis, budget.key, usedTokens)
+
     let raw = completion.choices?.[0]?.message?.content || ""
     raw = raw.trim()
 
@@ -116,7 +137,6 @@ export async function POST(req: Request) {
 
     const firstBrace = raw.indexOf("{")
     const lastBrace = raw.lastIndexOf("}")
-
     if (firstBrace === -1 || lastBrace === -1) {
       console.error("No JSON braces found in ask output:", raw)
       return NextResponse.json(

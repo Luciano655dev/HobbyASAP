@@ -1,7 +1,12 @@
+// app/api/lesson/route.ts
 import { NextResponse } from "next/server"
 import { Lesson } from "../generate/types"
 import Groq from "groq-sdk"
 import getLessonPrompt from "./lessonPrompt"
+import {
+  checkGlobalTokenBudget,
+  addGlobalTokens,
+} from "@/app/lib/groqGlobalLimit"
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -24,6 +29,18 @@ export async function POST(req: Request) {
 
     if (!topic || typeof topic !== "string") {
       return NextResponse.json({ error: "Topic is required." }, { status: 400 })
+    }
+
+    // === GLOBAL TOKEN LIMIT CHECK ===
+    const budget: any = await checkGlobalTokenBudget()
+    if (!budget.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            "HobbyASAP has reached today's AI usage limit. Please try again tomorrow.",
+        },
+        { status: 429 }
+      )
     }
 
     const userLevel =
@@ -49,6 +66,11 @@ export async function POST(req: Request) {
       temperature: 0.0,
       max_tokens: 2800,
     })
+
+    // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
+    const usage = (completion as any).usage
+    const usedTokens: number = usage?.total_tokens ?? 0
+    await addGlobalTokens(budget.redis, budget.key, usedTokens)
 
     let raw = completion.choices?.[0]?.message?.content || ""
     raw = raw.trim()
