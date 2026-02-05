@@ -94,7 +94,7 @@ export default function LessonsArea({
 
   return (
     <section className="mb-16 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-sm sm:text-base font-semibold text-text">
           Masterclasses & deep dives
         </h2>
@@ -145,13 +145,13 @@ export default function LessonsArea({
           return (
             <motion.div
               key={lessonKey}
-              className="bg-surface/95 border border-border rounded-2xl p-5 shadow-md"
+              className="bg-surface/95 border border-border rounded-3xl p-4 sm:p-5 shadow-md"
               variants={lessonCardVariants}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, amount: 0.35 }} // only when this lesson scrolls into view
             >
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-muted">
                     {lesson.kind === "masterclass" ? "Masterclass" : "In depth"}
@@ -164,14 +164,12 @@ export default function LessonsArea({
                     {lesson.topic}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <p className="text-[11px] text-muted">
-                    ~{lesson.estimatedTimeMinutes} min
-                  </p>
+                <div className="flex items-center justify-between gap-2 text-[11px] text-muted sm:flex-col sm:items-end sm:justify-start">
+                  <p>~{lesson.estimatedTimeMinutes} min</p>
                   <button
                     type="button"
                     onClick={() => onRemoveLesson(lessonIndex)}
-                    className="text-[10px] rounded-full border border-danger/60 px-2 py-0.5 text-danger hover:bg-danger/10"
+                    className="text-[10px] rounded-full border border-danger/60 px-2.5 py-1 text-danger hover:bg-danger/10"
                   >
                     Remove lesson
                   </button>
@@ -188,7 +186,7 @@ export default function LessonsArea({
                       {completedModules}/{moduleIds.length} complete
                     </span>
                   </div>
-                  <div className="mt-2 flex items-center gap-3">
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                     <div className="h-1.5 flex-1 rounded-full bg-surface-2">
                       <div
                         className="h-1.5 rounded-full bg-accent transition-all"
@@ -199,7 +197,7 @@ export default function LessonsArea({
                       <button
                         type="button"
                         onClick={() => openModule(nextModuleId)}
-                        className="rounded-full border border-accent/50 px-2.5 py-1 text-[10px] font-semibold text-accent hover:bg-accent/10"
+                        className="w-full sm:w-auto rounded-full border border-accent/50 px-3 py-1.5 text-[10px] font-semibold text-accent hover:bg-accent/10"
                       >
                         Continue module
                       </button>
@@ -235,7 +233,7 @@ export default function LessonsArea({
                       }`}
                       variants={sectionCardVariants}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <button
                           type="button"
                           onClick={() => toggleModuleOpen(moduleId)}
@@ -267,10 +265,10 @@ export default function LessonsArea({
                             {isOpen ? "Hide details" : "Open module"}
                           </p>
                         </button>
-                        <label className="flex items-center gap-2 text-[11px] text-muted">
+                        <label className="flex items-center gap-2 rounded-full border border-border bg-surface/70 px-3 py-1 text-[11px] text-muted sm:border-transparent sm:bg-transparent sm:px-0 sm:py-0">
                           <input
                             type="checkbox"
-                            className="mt-0.5 h-4 w-4 rounded border-border bg-surface accent-accent"
+                            className="mt-0.5 h-5 w-5 sm:h-4 sm:w-4 rounded border-border bg-surface accent-accent"
                             checked={isCompleted}
                             onChange={() => onToggleTask(moduleId)}
                           />
@@ -324,7 +322,7 @@ export default function LessonsArea({
                                 !lessonLoading &&
                                 onOpenLesson(
                                   "inDepth",
-                            `${lesson.topic} - ${section.heading}`
+                                  `${lesson.topic} - ${section.heading}`
                                 )
                               }
                               className={`inline-flex items-center justify-center rounded-xl bg-surface-2 px-3 py-1.5 text-[11px] font-semibold text-text border border-border shadow-sm hover:bg-surface hover:shadow-md active:translate-y-[1px] transition ${
@@ -374,7 +372,7 @@ export default function LessonsArea({
                         >
                           <input
                             type="checkbox"
-                            className="mt-1 h-4 w-4 rounded border-border bg-surface accent-accent"
+                            className="mt-1 h-5 w-5 sm:h-4 sm:w-4 rounded border-border bg-surface accent-accent"
                             checked={checked}
                             onChange={() => onToggleTask(id)}
                           />

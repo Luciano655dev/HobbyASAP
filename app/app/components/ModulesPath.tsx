@@ -401,7 +401,7 @@ export default function ModulesPath({
       )}
 
       <div className="relative">
-        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border -translate-x-1/2" />
+        <div className="absolute left-6 top-0 bottom-0 w-px bg-border sm:left-1/2 sm:-translate-x-1/2" />
         <div className="space-y-6">
           {modules.map((module, index) => {
             const unlocked = isUnlocked(index)
@@ -421,7 +421,7 @@ export default function ModulesPath({
                 viewport={{ once: true, amount: 0.4 }}
               >
                 <div
-                  className={`w-full sm:w-1/2 ${
+                  className={`w-full sm:w-1/2 pl-12 sm:pl-0 ${
                     alignLeft ? "sm:pr-10" : "sm:pl-10"
                   }`}
                 >
@@ -433,7 +433,7 @@ export default function ModulesPath({
                       setActiveModuleId(module.id)
                       setIsFollowingCurrent(module.id === currentModuleId)
                     }}
-                    className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                    className={`relative z-10 w-full rounded-2xl border px-4 py-3 text-left transition ${
                       completed
                         ? "border-accent/50 bg-accent-soft"
                         : unlocked
@@ -445,7 +445,7 @@ export default function ModulesPath({
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`h-12 w-12 rounded-full flex items-center justify-center text-lg shadow-sm ${
+                        className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center text-base sm:text-lg shadow-sm ${
                           completed
                             ? "bg-accent text-white"
                             : unlocked
@@ -465,6 +465,11 @@ export default function ModulesPath({
                         <p className="text-[11px] text-muted">
                           {module.estimatedMinutes} min · {module.xp} XP
                         </p>
+                        {completed && (
+                          <span className="mt-1 inline-flex items-center rounded-full border border-accent/40 px-2 py-[2px] text-[10px] text-accent sm:hidden">
+                            Completed
+                          </span>
+                        )}
                       </div>
                       {completed && (
                         <span className="text-[10px] text-accent">
