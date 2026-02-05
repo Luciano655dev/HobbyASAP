@@ -4,9 +4,11 @@
 import { useMemo } from "react"
 import { HobbyPlan, Lesson } from "../types"
 import buildTaskId from "../helpers/buildTaskId"
+import buildLessonSectionTaskId from "../helpers/buildLessonSectionTaskId"
 import { SavedSession } from "./useSessionsHistory"
 
 const LESSON_PRACTICE_XP = 10
+const LESSON_SECTION_XP = 8
 const XP_PER_LEVEL = 120
 
 export interface XpStatsResult {
@@ -27,19 +29,25 @@ function computeTotalXp(
   let totalXp = 0
 
   if (plan) {
-    for (const section of plan.sections) {
-      if (section.kind === "today" || section.kind === "checklist") {
-        section.items.forEach((item, index) => {
-          const id = buildTaskId(section.id, index, item.label)
-          if (completedTaskIds.includes(id)) {
-            totalXp += item.xp ?? 10
-          }
-        })
+    for (const module of plan.modules) {
+      if (completedTaskIds.includes(module.id)) {
+        totalXp += module.xp ?? 10
       }
     }
   }
 
   lessons.forEach((lesson, lessonIndex) => {
+    lesson.sections?.forEach((section, sectionIndex) => {
+      const id = buildLessonSectionTaskId(
+        lessonIndex,
+        sectionIndex,
+        section.heading
+      )
+      if (completedTaskIds.includes(id)) {
+        totalXp += LESSON_SECTION_XP
+      }
+    })
+
     lesson.practiceIdeas?.forEach((idea, practiceIndex) => {
       const id = buildTaskId(`lesson-${lessonIndex}`, practiceIndex, idea)
       if (completedTaskIds.includes(id)) {

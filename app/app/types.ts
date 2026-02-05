@@ -6,109 +6,37 @@ export type ResourceType =
   | "community"
   | "search"
 
-export type SectionKind =
-  | "intro"
-  | "roadmap"
-  | "today"
-  | "checklist"
-  | "weekly"
-  | "resources"
-  | "gear"
-  | "tips"
-  | "advanced"
+export type ModuleType = "read" | "quiz"
 
-export interface BaseSection {
+export interface BaseModule {
   id: string
-  kind: SectionKind
+  type: ModuleType
   title: string
-  description?: string
+  summary: string
+  estimatedMinutes: number
+  xp: number
 }
 
-export interface IntroSection extends BaseSection {
-  kind: "intro"
-  body: string
-  bulletPoints?: string[]
+export interface ReadModule extends BaseModule {
+  type: "read"
+  content: string[]
+  keyTakeaways?: string[]
 }
 
-export interface RoadmapSection extends BaseSection {
-  kind: "roadmap"
-  milestones: string[]
-  phases?: {
-    name: string
-    goal: string
-    focus: string[]
-  }[]
+export interface QuizQuestion {
+  question: string
+  options: string[]
+  answerIndex: number
+  explanation: string
 }
 
-export interface TodaySection extends BaseSection {
-  kind: "today"
-  items: {
-    label: string
-    minutes?: number
-    xp?: number
-  }[]
+export interface QuizModule extends BaseModule {
+  type: "quiz"
+  prompt: string
+  questions: QuizQuestion[]
 }
 
-export interface ChecklistSection extends BaseSection {
-  kind: "checklist"
-  items: {
-    label: string
-    minutes?: number
-    xp?: number
-  }[]
-}
-
-export interface WeeklySection extends BaseSection {
-  kind: "weekly"
-  weeks: {
-    week: number
-    focus: string
-    practice: string[]
-    goal: string
-  }[]
-}
-
-export interface ResourcesSection extends BaseSection {
-  kind: "resources"
-  resources: {
-    title: string
-    type: ResourceType
-    url: string
-    note: string
-  }[]
-}
-
-export interface GearSection extends BaseSection {
-  kind: "gear"
-  starter: string[]
-  niceToHave: string[]
-  moneySavingTips: string[]
-}
-
-export interface TipsSection extends BaseSection {
-  kind: "tips"
-  mistakes: {
-    mistake: string
-    fix: string
-  }[]
-}
-
-export interface AdvancedSection extends BaseSection {
-  kind: "advanced"
-  directions: string[]
-  longTermGoals: string[]
-}
-
-export type PlanSection =
-  | IntroSection
-  | RoadmapSection
-  | TodaySection
-  | ChecklistSection
-  | WeeklySection
-  | ResourcesSection
-  | GearSection
-  | TipsSection
-  | AdvancedSection
+export type Module = ReadModule | QuizModule
 
 export interface HobbyPlan {
   hobby: string
@@ -118,7 +46,7 @@ export interface HobbyPlan {
     from: string
     to: string
   }
-  sections: PlanSection[]
+  modules: Module[]
 }
 
 // ---- History types / constants ----

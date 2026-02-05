@@ -42,6 +42,7 @@ Content rules:
   - "heading": short and clear.
   - "body": 4–8 full sentences, concrete and beginner-friendly.
   - "tips" and "examples" should be actionable, not generic.
+  - Each section should feel like a bite-sized module a learner can complete in 5-15 minutes.
 - "practiceIdeas": 4–8 specific drills or exercises with clear time or reps.
 - "recommendedResources":
   - 2–6 items.

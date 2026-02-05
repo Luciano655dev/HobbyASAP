@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "No plan context provided. Generate a plan first, then ask a question about it.",
+            "No plan context provided. Generate a path first, then ask a question about it.",
         },
         { status: 400 }
       )
@@ -78,9 +78,9 @@ export async function POST(req: Request) {
     // We force JSON output with answer + tasks + inDepthTopic
     const systemPrompt =
       "You are HobbyASAP Coach, an expert hobby mentor.\n" +
-      "- You answer questions using ONLY the provided plan, lessons, and Q&A history.\n" +
+      "- You answer questions using ONLY the provided path, lessons, and Q&A history.\n" +
       "- Explain in clear, simple language and give concrete, actionable steps.\n" +
-      "- You are allowed to add extra tiny practice tasks that fit the plan, but It is not obrigatory.\n" +
+      "- You are allowed to add extra tiny practice tasks that fit the path, but It is not obrigatory.\n" +
       "- If user seems to want more depth on a specific topic, you may suggest an inDepthTopic.\n\n" +
       "You MUST respond with VALID JSON ONLY (no markdown, no prose around it) in this exact shape:\n" +
       `{
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
       "- Do NOT add any extra top-level keys.\n"
 
     const userPrompt =
-      `Here is the current hobby plan:\n\n` +
+      `Here is the current hobby path:\n\n` +
       `${planSummary}\n\n` +
       `Here are masterclasses / in-depth lessons (if any):\n\n` +
       `${lessonsSummary || "(no extra lessons yet)"}\n\n` +
@@ -215,147 +215,38 @@ function buildPlanSummary(plan: HobbyPlan): string {
     `Hobby: ${plan.hobby}\nLevel: ${plan.level}\nIcon: ${plan.icon || ""}`
   )
 
-  for (const section of plan.sections) {
+  for (const module of plan.modules) {
     parts.push(
-      `\n=== Section: ${section.kind.toUpperCase()} – ${section.title} ===`
+      `\n=== Module: ${module.type.toUpperCase()} - ${module.title} ===`
     )
-    if (section.description) {
-      parts.push(`Description: ${section.description}`)
+    parts.push(`Summary: ${module.summary}`)
+    parts.push(
+      `Estimated: ${module.estimatedMinutes} min | XP: ${module.xp}`
+    )
+
+    if (module.type === "read") {
+      const content = (module.content || []).slice(0, 6)
+      if (content.length) {
+        parts.push(
+          `Content:\n${content.map((x: string) => `- ${x}`).join("\n")}`
+        )
+      }
+      const takeaways = (module.keyTakeaways || []).slice(0, 4)
+      if (takeaways.length) {
+        parts.push(`Key takeaways: ${takeaways.join(", ")}`)
+      }
     }
 
-    switch (section.kind) {
-      case "intro": {
-        const s: any = section
-        parts.push(`Body: ${s.body}`)
-        const bp = s.bulletPoints as string[] | undefined
-        if (bp && bp.length) {
-          parts.push(
-            `Key points:\n${bp
-              .slice(0, 6)
-              .map((x) => `- ${x}`)
-              .join("\n")}`
-          )
-        }
-        break
-      }
-
-      case "roadmap": {
-        const s: any = section
-        const milestones = (s.milestones || []).slice(0, 10)
-        if (milestones.length) {
-          parts.push(
-            `Milestones:\n${milestones
-              .map((m: string, i: number) => `${i + 1}. ${m}`)
-              .join("\n")}`
-          )
-        }
-        const phases = (s.phases || []).slice(0, 5)
-        for (const p of phases) {
-          parts.push(
-            `Phase: ${p.name}\n  Goal: ${p.goal}\n  Focus: ${(p.focus || [])
-              .slice(0, 6)
-              .join(", ")}`
-          )
-        }
-        break
-      }
-
-      case "today": {
-        const s: any = section
-        const items = (s.items || []).slice(0, 8)
+    if (module.type === "quiz") {
+      parts.push(`Prompt: ${module.prompt}`)
+      const questions = (module.questions || []).slice(0, 3)
+      for (const q of questions) {
         parts.push(
-          `Today tasks:\n${items
-            .map(
-              (it: any) =>
-                `- ${it.label} (minutes: ${it.minutes ?? "?"}, xp: ${
-                  it.xp ?? "?"
-                })`
-            )
-            .join("\n")}`
+          `Quiz Q: ${q.question}\n  Options: ${(q.options || [])
+            .slice(0, 4)
+            .join(", ")}\n  Explanation: ${q.explanation}`
         )
-        break
       }
-
-      case "checklist": {
-        const s: any = section
-        const items = (s.items || []).slice(0, 10)
-        parts.push(
-          `Checklist items:\n${items
-            .map(
-              (it: any) =>
-                `- ${it.label} (minutes: ${it.minutes ?? "?"}, xp: ${
-                  it.xp ?? "?"
-                })`
-            )
-            .join("\n")}`
-        )
-        break
-      }
-
-      case "weekly": {
-        const s: any = section
-        const weeks = (s.weeks || []).slice(0, 6)
-        for (const w of weeks) {
-          parts.push(
-            `Week ${w.week}: focus=${w.focus}; goal=${w.goal}; practice=${(
-              w.practice || []
-            )
-              .slice(0, 6)
-              .join(", ")}`
-          )
-        }
-        break
-      }
-
-      case "resources": {
-        const s: any = section
-        const resources = (s.resources || []).slice(0, 8)
-        parts.push(
-          `Resources (title – type – note):\n${resources
-            .map((r: any) => `- ${r.title} – ${r.type} – ${r.note ?? ""}`)
-            .join("\n")}`
-        )
-        break
-      }
-
-      case "gear": {
-        const s: any = section
-        parts.push(`Starter gear: ${(s.starter || []).slice(0, 6).join(", ")}`)
-        parts.push(
-          `Nice to have: ${(s.niceToHave || []).slice(0, 6).join(", ")}`
-        )
-        parts.push(
-          `Money saving tips: ${(s.moneySavingTips || [])
-            .slice(0, 6)
-            .join(", ")}`
-        )
-        break
-      }
-
-      case "tips": {
-        const s: any = section
-        const mistakes = (s.mistakes || []).slice(0, 8)
-        parts.push(
-          `Common mistakes:\n${mistakes
-            .map((m: any) => `- ${m.mistake} | Fix: ${m.fix}`)
-            .join("\n")}`
-        )
-        break
-      }
-
-      case "advanced": {
-        const s: any = section
-        parts.push(
-          `Advanced directions: ${(s.directions || []).slice(0, 6).join(", ")}`
-        )
-        parts.push(
-          `Long term goals: ${(s.longTermGoals || []).slice(0, 6).join(", ")}`
-        )
-        break
-      }
-
-      default:
-        break
     }
   }
 
@@ -372,7 +263,7 @@ function buildLessonsSummary(lessons: Lesson[]): string {
 
   lessons.forEach((lesson, index) => {
     parts.push(
-      `\n=== Lesson ${index + 1}: ${lesson.kind.toUpperCase()} – ${
+      `\n=== Lesson ${index + 1}: ${lesson.kind.toUpperCase()} - ${
         lesson.title
       } ===`
     )

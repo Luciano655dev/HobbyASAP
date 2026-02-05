@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { HobbyPlan, Lesson } from "../types"
 import { QAItem } from "../AskQuestionPanel"
 
-const LS_SESSIONS_KEY = "hobbyasap_sessions_v1"
+const LS_SESSIONS_KEY = "hobbyasap_sessions_v2"
 
 export interface StreakState {
   current: number

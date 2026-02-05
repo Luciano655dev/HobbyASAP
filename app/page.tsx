@@ -7,7 +7,7 @@ import FAQ from "@/components/home/FAQ"
 
 export default function HobbyASAPHome() {
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50">
+    <main className="min-h-screen bg-app-bg text-text">
       <Hero />
       <MetricSection />
       <HowItWorks />

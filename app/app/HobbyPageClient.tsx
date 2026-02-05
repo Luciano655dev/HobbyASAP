@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { motion, type Variants } from "framer-motion"
 import AskQuestionPanel, { QAItem } from "./AskQuestionPanel"
 import { HobbyPlan, Lesson, LessonKind } from "./types"
-import buildTaskId from "./helpers/buildTaskId"
 import {
   useSessionsHistory,
   INITIAL_STREAK,
@@ -16,7 +15,7 @@ import { useGlobalXpStats } from "./hooks/useXpStats"
 import Hero from "./components/Hero"
 import HistoryPanel from "./components/HistoryPanel"
 import PlanHeader from "./components/PlanHeader"
-import PlanSections from "./components/PlanSections"
+import ModulesPath from "./components/ModulesPath"
 import LessonsArea from "./components/LessonsArea"
 
 // Animations for the main layout + form
@@ -136,48 +135,29 @@ export default function HobbyPageClient() {
     prevLessonsLengthRef.current = currentLength
   }, [lessons.length])
 
-  // all tasks helper
-  const allTasks = useMemo(() => {
+  // modules progress
+  const moduleIds = useMemo(() => {
     if (!plan) return []
-    const tasks: { id: string; label: string; isToday: boolean }[] = []
-
-    for (const section of plan.sections) {
-      if (section.kind === "today" || section.kind === "checklist") {
-        section.items.forEach((item, index) => {
-          const id = buildTaskId(section.id, index, item.label)
-          tasks.push({
-            id,
-            label: item.label,
-            isToday: section.kind === "today",
-          })
-        })
-      }
-    }
-
-    return tasks
+    return plan.modules.map((module) => module.id)
   }, [plan])
 
-  // progress percentage
   const progress = useMemo(() => {
-    if (!plan || allTasks.length === 0) return 0
-    const done = allTasks.filter((t) => completedTaskIds.includes(t.id)).length
-    return Math.round((done / allTasks.length) * 100)
-  }, [plan, allTasks, completedTaskIds])
+    if (!plan || moduleIds.length === 0) return 0
+    const done = moduleIds.filter((id) => completedTaskIds.includes(id)).length
+    return Math.round((done / moduleIds.length) * 100)
+  }, [plan, moduleIds, completedTaskIds])
 
-  // daily session completed
   const dailySessionCompleted = useMemo(() => {
-    if (!plan) return false
-    const todayTasks = allTasks.filter((t) => t.isToday)
-    if (todayTasks.length === 0) return false
-    return todayTasks.every((t) => completedTaskIds.includes(t.id))
-  }, [plan, allTasks, completedTaskIds])
+    const todayStr = new Date().toISOString().slice(0, 10)
+    return streak.lastActiveDate === todayStr
+  }, [streak.lastActiveDate])
 
   // XP stats via hook (global from history)
   const xpStats = useGlobalXpStats(history)
 
   // theme + icon for header
-  const themeFrom = plan?.theme?.from ?? "#10b981ff"
-  const themeTo = plan?.theme?.to ?? "#020617ff"
+  const themeFrom = "var(--accent-strong)"
+  const themeTo = "var(--accent)"
 
   // ---- Streak helper ----
   function updateStreakOnTaskCheck() {
@@ -324,16 +304,21 @@ export default function HobbyPageClient() {
     }
 
     setLoading(true)
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
     try {
+      const controller = new AbortController()
+      timeoutId = setTimeout(() => controller.abort(), 30000)
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hobby, level, language }),
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || "Failed to generate plan.")
+        throw new Error(data.error || "Failed to generate path.")
       }
 
       const data = await res.json()
@@ -347,8 +332,15 @@ export default function HobbyPageClient() {
       setSessionHobby(hobby)
       setSessionLevel(level)
     } catch (err: any) {
-      setError(err.message || "Something went wrong.")
+      const message =
+        err?.name === "AbortError"
+          ? "Generation timed out. Please try again."
+          : err.message || "Something went wrong."
+      setError(message)
     } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
       setLoading(false)
     }
   }
@@ -420,7 +412,7 @@ export default function HobbyPageClient() {
   // ---- UI ----
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50 flex justify-center px-4 py-8 sm:py-10">
+    <main className="min-h-screen bg-app-bg text-text flex justify-center px-4 py-8 sm:py-10">
       <div className="w-full max-w-5xl">
         {/* Hero + global stats */}
         <Hero streak={streak} xpStats={xpStats} />
@@ -435,24 +427,24 @@ export default function HobbyPageClient() {
           {/* Form */}
           <motion.form
             onSubmit={handleSubmit}
-            className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col gap-4 shadow-md"
+            className="bg-surface/90 border border-border rounded-2xl p-5 sm:p-6 flex flex-col gap-4 shadow-md"
             variants={formVariants}
           >
             {/* Top row: title + language toggle */}
             <div className="flex items-center justify-between gap-3 mb-1">
-              <h2 className="text-sm font-semibold text-slate-100">
-                Design your hobby plan
+              <h2 className="text-sm font-semibold text-text">
+                Design your hobby path
               </h2>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-slate-400">Language</span>
-                <div className="inline-flex items-center rounded-full bg-slate-800 p-1 text-[11px]">
+                <span className="text-[11px] text-muted">Language</span>
+                <div className="inline-flex items-center rounded-full bg-surface-2 p-1 text-[11px]">
                   <button
                     type="button"
                     onClick={() => handleLanguageChange("en")}
                     className={`px-2.5 py-1 rounded-full transition-colors ${
                       language === "en"
-                        ? "bg-slate-950 text-emerald-400"
-                        : "text-slate-300"
+                        ? "bg-surface text-accent"
+                        : "text-muted"
                     }`}
                   >
                     EN
@@ -462,8 +454,8 @@ export default function HobbyPageClient() {
                     onClick={() => handleLanguageChange("pt")}
                     className={`px-2.5 py-1 rounded-full transition-colors ${
                       language === "pt"
-                        ? "bg-slate-950 text-emerald-400"
-                        : "text-slate-300"
+                        ? "bg-surface text-accent"
+                        : "text-muted"
                     }`}
                   >
                     PT
@@ -474,7 +466,7 @@ export default function HobbyPageClient() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 space-y-1">
-                <label className="text-[11px] font-semibold text-slate-300">
+                <label className="text-[11px] font-semibold text-muted">
                   Hobby
                 </label>
                 <input
@@ -482,17 +474,17 @@ export default function HobbyPageClient() {
                   value={hobby}
                   onChange={(e) => setHobby(e.target.value)}
                   placeholder="Example: Fishing, Photography, Guitar, Coding..."
-                  className="mt-1 w-full rounded-xl px-3 py-2.5 bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm text-slate-50 placeholder:text-slate-500"
+                  className="mt-1 w-full rounded-xl px-3 py-2.5 bg-surface border border-border focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent text-sm text-text placeholder:text-muted"
                 />
               </div>
               <div className="w-full sm:w-56 space-y-1">
-                <label className="text-[11px] font-semibold text-slate-300">
+                <label className="text-[11px] font-semibold text-muted">
                   Your current level
                 </label>
                 <select
                   value={level}
                   onChange={(e) => setLevel(e.target.value)}
-                  className="mt-1 w-full rounded-xl px-3 py-2.5 bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm text-slate-50"
+                  className="mt-1 w-full rounded-xl px-3 py-2.5 bg-surface border border-border focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent text-sm text-text"
                 >
                   <option value="complete beginner">Complete beginner</option>
                   <option value="some experience">Some experience</option>
@@ -505,13 +497,13 @@ export default function HobbyPageClient() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-4 py-2.5 text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="mt-2 inline-flex items-center justify-center rounded-xl bg-accent-strong hover:bg-accent text-white font-semibold px-4 py-2.5 text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? "Designing your plan..." : "Generate my plan"}
+              {loading ? "Designing your path..." : "Generate my path"}
             </button>
 
             {error && (
-              <p className="mt-1 text-sm text-red-400 bg-red-950/40 border border-red-800/60 rounded-xl px-3 py-2">
+              <p className="mt-1 text-sm text-danger bg-danger/10 border border-danger/40 rounded-xl px-3 py-2">
                 {error}
               </p>
             )}
@@ -539,9 +531,9 @@ export default function HobbyPageClient() {
           </section>
         )}
 
-        {/* Plan sections */}
+        {/* Modules path */}
         {plan && (
-          <PlanSections
+          <ModulesPath
             plan={plan}
             completedTaskIds={completedTaskIds}
             onToggleTask={toggleTask}
@@ -551,11 +543,10 @@ export default function HobbyPageClient() {
         )}
 
         {!plan && !loading && !error && (
-          <p className="text-xs sm:text-sm text-slate-500 text-center mb-10">
-            Generate a plan to see how the AI designs different sections for
-            each hobby: intros, tiny tasks, checklists, roadmaps and more. Then
-            click Masterclass / In depth to stack course-style content below and
-            ask follow-up questions.
+          <p className="text-xs sm:text-sm text-muted text-center mb-10">
+            Generate a path to see a Duolingo-style sequence of reading modules
+            and quick quizzes. Complete modules to progress, then stack
+            masterclasses or deep dives below and ask follow-up questions.
           </p>
         )}
 
