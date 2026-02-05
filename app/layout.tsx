@@ -37,6 +37,7 @@ export const metadata = {
   description:
     "AI-powered learning paths, masterclasses, quests, Levels, and streaks.",
   icons: {
-    icon: "/logo.png",
+    icon: "/Logo.png",
+    apple: "/Logo.png",
   },
 }

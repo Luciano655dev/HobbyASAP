@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import ThemeToggle from "./ThemeToggle"
 
 export default function Navbar() {
@@ -18,9 +19,14 @@ export default function Navbar() {
             href="/"
             className="flex items-center gap-2 transition hover:opacity-90"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-accent-strong text-lg font-black text-white shadow-lg shadow-accent/40">
-              H
-            </div>
+            <Image
+              src="/Logo.png"
+              alt="HobbyASAP logo"
+              width={36}
+              height={36}
+              priority
+              className="h-9 w-9 rounded-2xl border border-border bg-surface p-1 shadow-sm object-contain"
+            />
             <div>
               <p className="text-sm font-semibold tracking-tight text-text">
                 HobbyASAP
