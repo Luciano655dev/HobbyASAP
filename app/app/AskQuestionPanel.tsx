@@ -89,12 +89,12 @@ function renderAnswer(answer: string) {
         return (
           <div key={idx} className="mb-2 last:mb-0">
             {nonBulletLines.length > 0 && (
-              <p className="text-sm text-slate-200">
+              <p className="text-sm text-muted">
                 {nonBulletLines.join(" ").trim()}
               </p>
             )}
             {bulletLines.length > 0 && (
-              <ul className="list-disc pl-5 text-xs text-slate-300 mt-1 space-y-1">
+              <ul className="list-disc pl-5 text-xs text-muted mt-1 space-y-1">
                 {bulletLines.map((line, i) => (
                   <li key={i}>{line.replace(/^\s*[-*]\s+/, "")}</li>
                 ))}
@@ -147,7 +147,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
     }
 
     if (!plan) {
-      setError("Generate a plan first so I have context.")
+      setError("Generate a path first so I have context.")
       return
     }
 
@@ -211,23 +211,23 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
       {/* Title row outside card, like LessonsArea */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm sm:text-base font-semibold text-slate-50">
-            Ask a question about your plan
+          <h2 className="text-sm sm:text-base font-semibold text-text">
+            Ask a question about your path
           </h2>
-          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-            Ask anything about your roadmap, tasks, or masterclasses. I’ll use
-            your current plan, lessons, and previous questions as context.
+          <p className="text-[11px] sm:text-xs text-muted mt-0.5">
+            Ask anything about your modules, quizzes, or masterclasses. I’ll
+            use your current path, lessons, and previous questions as context.
           </p>
         </div>
         {!hasContext && (
-          <span className="text-[10px] px-2 py-1 rounded-full border border-slate-700 text-slate-400">
-            Generate a plan first
+          <span className="text-[10px] px-2 py-1 rounded-full border border-border text-muted">
+            Generate a path first
           </span>
         )}
       </div>
 
       <motion.div
-        className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md"
+        className="bg-surface/90 border border-border rounded-2xl p-5 sm:p-6 shadow-md"
         variants={panelVariants}
         initial="hidden"
         whileInView="visible"
@@ -242,9 +242,9 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
             placeholder={
               hasContext
                 ? "Example: Can you clarify week 2 drills? Or how should I adapt this if I only have 30 minutes?"
-                : "Generate a plan first, then ask questions about it."
+                : "Generate a path first, then ask questions about it."
             }
-            className="w-full rounded-xl px-3 py-2.5 bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm text-slate-50 placeholder:text-slate-500 resize-none"
+            className="w-full rounded-xl px-3 py-2.5 bg-surface border border-border focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent text-sm text-text placeholder:text-muted resize-none"
             disabled={!hasContext || loading}
           />
 
@@ -252,26 +252,26 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
             <button
               type="submit"
               disabled={!hasContext || loading}
-              className="inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-4 py-2 text-xs sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center justify-center rounded-xl bg-accent-strong hover:bg-accent text-white font-semibold px-4 py-2 text-xs sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? "Thinking..." : "Ask about this plan"}
+              {loading ? "Thinking..." : "Ask about this path"}
             </button>
-            <p className="text-[10px] text-slate-500">
-              Context: roadmap · masterclasses · previous Q&A.
+            <p className="text-[10px] text-muted">
+              Context: modules · masterclasses · previous Q&A.
             </p>
           </div>
 
           {error && (
-            <p className="text-xs text-red-400 bg-red-950/40 border border-red-800/60 rounded-xl px-3 py-2">
+            <p className="text-xs text-danger bg-danger/10 border border-danger/40 rounded-xl px-3 py-2">
               {error}
             </p>
           )}
         </form>
 
-        {/* Latest answer – big coach card */}
+      {/* Latest answer - big coach card */}
         {latest && (
           <motion.div
-            className="mb-5 rounded-2xl border border-emerald-500/40 bg-slate-950/90 p-4 shadow-md shadow-emerald-500/10"
+            className="mb-5 rounded-2xl border border-accent/40 bg-surface/90 p-4 shadow-md shadow-accent/10"
             variants={latestCardVariants}
             initial="hidden"
             whileInView="visible"
@@ -279,12 +279,12 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
           >
             <div className="flex items-start justify-between gap-2 mb-1">
               <div>
-                <p className="text-[11px] uppercase tracking-wide text-emerald-300 mb-1">
+                <p className="text-[11px] uppercase tracking-wide text-accent mb-1">
                   Latest answer
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted">
                   Question:{" "}
-                  <span className="text-slate-200 font-medium">
+                  <span className="text-text font-medium">
                     {latest.question}
                   </span>
                 </p>
@@ -292,20 +292,20 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
               <button
                 type="button"
                 onClick={() => onQuestionDeleted(latest.id)}
-                className="text-[10px] rounded-full border border-red-500/60 px-2 py-0.5 text-red-300 hover:bg-red-500/10"
+                className="text-[10px] rounded-full border border-danger/60 px-2 py-0.5 text-danger hover:bg-danger/10"
               >
                 Remove
               </button>
             </div>
 
-            <div className="rounded-xl bg-slate-950/70 border border-slate-800 px-3 py-2 mb-3">
+            <div className="rounded-xl bg-surface/70 border border-border px-3 py-2 mb-3">
               {renderAnswer(latest.answer)}
             </div>
 
             {/* Optional tasks from the AI for this answer */}
             {latest.tasks && latest.tasks.length > 0 && (
               <div className="mb-3">
-                <p className="text-[11px] font-semibold text-emerald-200 mb-1.5">
+                <p className="text-[11px] font-semibold text-accent mb-1.5">
                   Suggested practice from this answer
                 </p>
                 <ul className="space-y-1.5">
@@ -317,13 +317,13 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
                         key={id}
                         className={`flex items-start gap-2 rounded-2xl px-3 py-1.5 border text-[11px] sm:text-xs ${
                           checked
-                            ? "border-emerald-400/60 bg-emerald-500/10"
-                            : "border-slate-700 bg-slate-950/70 hover:border-emerald-400/60"
+                            ? "border-accent/60 bg-accent-soft"
+                            : "border-border bg-surface/70 hover:border-accent/60"
                         }`}
                       >
                         <input
                           type="checkbox"
-                          className="mt-0.5 h-3.5 w-3.5 rounded border-slate-400 bg-slate-950 accent-emerald-400"
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-border bg-surface accent-accent"
                           checked={checked}
                           onChange={() => toggleTask(id)}
                         />
@@ -331,13 +331,13 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
                           <p
                             className={
                               checked
-                                ? "text-slate-400 line-through"
-                                : "text-slate-100"
+                                ? "text-muted line-through"
+                                : "text-text"
                             }
                           >
                             {task.label}
                           </p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">
+                          <p className="text-[10px] text-muted mt-0.5">
                             {task.minutes && <>~{task.minutes} min </>}
                             {task.minutes && task.xp && "· "}
                             {task.xp && <>XP: {task.xp}</>}
@@ -359,9 +359,9 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
                   !inDepthDisabled("latest") &&
                   onInDepthRequest(latest.inDepthTopic!)
                 }
-                className={`inline-flex items-center justify-center rounded-xl bg-emerald-500/90 px-3 py-1.5 text-[11px] font-semibold text-slate-950 shadow-sm shadow-emerald-500/40 hover:bg-emerald-400 hover:shadow-md active:translate-y-[1px] transition ${
+                className={`inline-flex items-center justify-center rounded-xl bg-accent-strong px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-accent/40 hover:bg-accent hover:shadow-md active:translate-y-[1px] transition ${
                   inDepthDisabled("latest")
-                    ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-emerald-500/90 hover:shadow-sm"
+                    ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-accent-strong hover:shadow-sm"
                     : ""
                 }`}
               >
@@ -369,7 +369,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
               </button>
             )}
 
-            <p className="mt-2 text-[10px] text-slate-500">
+            <p className="mt-2 text-[10px] text-muted">
               {new Date(latest.createdAt).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -381,8 +381,8 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
 
         {/* Q&A history list (older ones) */}
         {older.length > 0 && (
-          <div className="border-t border-slate-800 pt-3">
-            <h3 className="text-xs sm:text-sm font-semibold text-slate-100 mb-2">
+          <div className="border-t border-border pt-3">
+            <h3 className="text-xs sm:text-sm font-semibold text-text mb-2">
               Previous questions
             </h3>
             <motion.div
@@ -395,29 +395,29 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
               {older.map((item) => (
                 <motion.div
                   key={item.id}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3 text-xs sm:text-sm"
+                  className="rounded-2xl border border-border bg-surface/80 p-3 text-xs sm:text-sm"
                   variants={historyItemVariants}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-slate-100 font-medium">
+                    <p className="text-text font-medium">
                       Q: {item.question}
                     </p>
                     <button
                       type="button"
                       onClick={() => onQuestionDeleted(item.id)}
-                      className="text-[10px] rounded-full border border-red-500/60 px-2 py-0.5 text-red-300 hover:bg-red-500/10"
+                      className="text-[10px] rounded-full border border-danger/60 px-2 py-0.5 text-danger hover:bg-danger/10"
                     >
                       Remove
                     </button>
                   </div>
 
-                  <div className="text-slate-300 text-xs sm:text-sm mb-2">
+                  <div className="text-muted text-xs sm:text-sm mb-2">
                     {renderAnswer(item.answer)}
                   </div>
 
                   {item.tasks && item.tasks.length > 0 && (
                     <div className="mb-1">
-                      <p className="text-[10px] font-semibold text-emerald-200 mb-0.5">
+                      <p className="text-[10px] font-semibold text-accent mb-0.5">
                         Suggested tasks from this answer:
                       </p>
                       <ul className="space-y-0.5">
@@ -429,13 +429,13 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
                               key={id}
                               className={`flex items-start gap-2 rounded-xl px-2 py-1 border text-[10px] ${
                                 checked
-                                  ? "border-emerald-400/60 bg-emerald-500/10"
-                                  : "border-slate-700 bg-slate-950/70"
+                                  ? "border-accent/60 bg-accent-soft"
+                                  : "border-border bg-surface/70"
                               }`}
                             >
                               <input
                                 type="checkbox"
-                                className="mt-0.5 h-3 w-3 rounded border-slate-400 bg-slate-950 accent-emerald-400"
+                                className="mt-0.5 h-3 w-3 rounded border-border bg-surface accent-accent"
                                 checked={checked}
                                 onChange={() => toggleTask(id)}
                               />
@@ -443,8 +443,8 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
                                 <p
                                   className={
                                     checked
-                                      ? "text-slate-400 line-through"
-                                      : "text-slate-100"
+                                      ? "text-muted line-through"
+                                      : "text-text"
                                   }
                                 >
                                   {task.label}
@@ -465,9 +465,9 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
                         !inDepthDisabled("history") &&
                         onInDepthRequest(item.inDepthTopic!)
                       }
-                      className={`mt-1 inline-flex items-center gap-1 rounded-full border border-slate-600 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800/80 ${
+                      className={`mt-1 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-text hover:bg-surface-2 ${
                         inDepthDisabled("history")
-                          ? "opacity-50 cursor-not-allowed hover:bg-slate-950"
+                          ? "opacity-50 cursor-not-allowed hover:bg-surface"
                           : ""
                       }`}
                     >
@@ -475,7 +475,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
                     </button>
                   )}
 
-                  <p className="mt-1 text-[10px] text-slate-500">
+                  <p className="mt-1 text-[10px] text-muted">
                     {new Date(item.createdAt).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -489,10 +489,10 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
         )}
 
         {!latest && !error && (
-          <p className="text-[11px] text-slate-500 mt-1">
-            No questions yet. Ask something specific about your tasks, weeks, or
-            gear and you’ll see the answer here, sometimes with extra practice
-            tasks and an in-depth suggestion.
+          <p className="text-[11px] text-muted mt-1">
+            No questions yet. Ask something specific about your modules,
+            quizzes, or gear and you’ll see the answer here, sometimes with
+            extra practice tasks and an in-depth suggestion.
           </p>
         )}
       </motion.div>

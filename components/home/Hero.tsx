@@ -51,9 +51,6 @@ const taskItem: Variants = {
 export default function Hero() {
   return (
     <section className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 pb-14 pt-16 sm:pb-18 sm:pt-20 lg:flex-row lg:items-center">
-      {/* extra glows */}
-      <div className="pointer-events-none absolute left-[-120px] top-10 h-64 w-64 rounded-full bg-lime-400/35 blur-3xl" />
-      <div className="pointer-events-none absolute right-[-80px] top-40 h-56 w-56 rounded-full bg-violet-500/40 blur-3xl" />
 
       {/* Left side */}
       <motion.div
@@ -68,12 +65,12 @@ export default function Hero() {
             variants={container}
           >
             Learn any hobby
-            <span className="block bg-gradient-to-r from-lime-300 via-sky-300 to-violet-300 bg-clip-text text-transparent">
+            <span className="block bg-gradient-to-r from-accent-strong via-accent to-accent bg-clip-text text-transparent">
               as fast and as easily as possible
             </span>
           </motion.h1>
           <motion.p
-            className="mt-3 text-sm text-slate-200 sm:text-base"
+            className="mt-3 text-sm text-muted sm:text-base"
             variants={container}
           >
             HobbyASAP gives you a roadmap, daily quests, streaks and masterclass
@@ -88,7 +85,7 @@ export default function Hero() {
         >
           <Link
             href="/app"
-            className="inline-flex items-center justify-center rounded-full bg-lime-400 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-lime-300/60 hover:bg-lime-300"
+            className="inline-flex items-center justify-center rounded-full bg-accent-strong px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent/40 hover:bg-accent"
           >
             Start a hobby quest
             <span className="ml-1.5 text-lg">▶</span>
@@ -99,14 +96,14 @@ export default function Hero() {
               const el = document.getElementById("how-it-works")
               if (el) el.scrollIntoView({ behavior: "smooth" })
             }}
-            className="inline-flex items-center justify-center rounded-full border border-white/15 bg-slate-950/70 px-4 py-2 text-xs font-medium text-slate-100 hover:border-lime-300 hover:text-lime-200"
+            className="inline-flex items-center justify-center rounded-full border border-border bg-surface/70 px-4 py-2 text-xs font-medium text-text hover:border-accent/50 hover:text-accent"
           >
             See how it works
           </button>
         </motion.div>
 
         <motion.div
-          className="flex flex-wrap items-center gap-4 text-[11px] text-slate-300"
+          className="flex flex-wrap items-center gap-4 text-[11px] text-muted"
           variants={container}
         >
           <span>🔥 Designed for streaks and XP</span>
@@ -122,27 +119,27 @@ export default function Hero() {
         animate="visible"
         variants={rightCard}
       >
-        <div className="rounded-[26px] border border-white/10 bg-slate-950/90 p-4 shadow-2xl shadow-slate-950/90">
+        <div className="rounded-[26px] border border-border bg-surface/90 p-4 shadow-2xl shadow-accent/10">
           {/* header */}
           <div className="mb-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-lime-300 to-sky-400 text-lg">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-accent-strong text-lg text-white">
                 🎸
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-50">
+                <p className="text-sm font-semibold text-text">
                   Guitar quest
                 </p>
-                <p className="text-[11px] text-lime-200">
+                <p className="text-[11px] text-accent">
                   Level 2 • Confident beginner
                 </p>
               </div>
             </div>
             <div className="text-right text-[11px]">
-              <p className="text-slate-400">Today XP</p>
-              <p className="font-semibold text-lime-300">+30</p>
-              <div className="mt-1 h-1.5 w-20 rounded-full bg-slate-800">
-                <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-lime-300 to-sky-400" />
+              <p className="text-muted">Today XP</p>
+              <p className="font-semibold text-accent">+30</p>
+              <div className="mt-1 h-1.5 w-20 rounded-full bg-surface-2">
+                <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-accent to-accent-strong" />
               </div>
             </div>
           </div>
@@ -150,16 +147,16 @@ export default function Hero() {
           <div className="space-y-3 text-xs">
             {/* today card */}
             <motion.div
-              className="rounded-2xl border border-lime-300/60 bg-lime-300/10 p-3"
+              className="rounded-2xl border border-accent/40 bg-accent-soft p-3"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25, duration: 0.4, ease: "easeOut" }}
             >
               <div className="mb-1 flex items-center justify-between">
-                <p className="text-[11px] font-semibold text-lime-100">
+                <p className="text-[11px] font-semibold text-accent">
                   Today - 25 minute session
                 </p>
-                <span className="rounded-full bg-slate-950/70 px-2 py-[2px] text-[10px] text-lime-100">
+                <span className="rounded-full bg-surface/70 px-2 py-[2px] text-[10px] text-accent">
                   Daily quests
                 </span>
               </div>
@@ -196,27 +193,27 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.4, ease: "easeOut" }}
             >
-              <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-3">
-                <p className="text-[11px] font-semibold text-slate-100">
+              <div className="rounded-2xl border border-border bg-surface-2/80 p-3">
+                <p className="text-[11px] font-semibold text-text">
                   Week focus
                 </p>
-                <p className="mt-1 text-[11px] text-slate-300">
+                <p className="mt-1 text-[11px] text-muted">
                   Switch chords without stopping the strum.
                 </p>
-                <ul className="mt-1 list-disc pl-4 text-[11px] text-slate-400">
+                <ul className="mt-1 list-disc pl-4 text-[11px] text-muted">
                   <li>3 sets of 2 chord switches with slow metronome</li>
                   <li>Play along with a simple backing track</li>
                   <li>1 tiny recording per day to track progress</li>
                 </ul>
               </div>
-              <div className="rounded-2xl border border-sky-400/50 bg-sky-500/10 p-3">
-                <p className="text-[11px] font-semibold text-slate-100">
+              <div className="rounded-2xl border border-accent/40 bg-accent-soft p-3">
+                <p className="text-[11px] font-semibold text-text">
                   Ask your hobby coach
                 </p>
-                <p className="mt-1 text-[11px] text-slate-200">
+                <p className="mt-1 text-[11px] text-text">
                   “My fingers hurt and I mute strings. What should I change”
                 </p>
-                <p className="mt-1 rounded-xl bg-slate-950/70 px-2 py-1 text-[11px] text-sky-100">
+                <p className="mt-1 rounded-xl bg-surface/70 px-2 py-1 text-[11px] text-accent">
                   Try 5 min of slow presses, close to the fret, with lighter
                   pressure. Only then add full strums.
                 </p>
@@ -224,7 +221,7 @@ export default function Hero() {
             </motion.div>
 
             <motion.button
-              className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-lime-300 to-sky-300 px-4 py-2 text-xs font-semibold text-slate-950 shadow-md shadow-lime-300/50 hover:brightness-110"
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-accent to-accent-strong px-4 py-2 text-xs font-semibold text-white shadow-md shadow-accent/40 hover:brightness-110"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -245,17 +242,17 @@ function HeroTask(props: { label: string; meta: string; done?: boolean }) {
       <div
         className={`mt-[2px] flex h-4 w-4 items-center justify-center rounded-md border text-[9px] ${
           done
-            ? "border-lime-300 bg-lime-300 text-slate-900"
-            : "border-slate-600 bg-slate-950 text-slate-500"
+            ? "border-accent bg-accent text-white"
+            : "border-border bg-surface text-muted"
         }`}
       >
         {done ? "✓" : ""}
       </div>
       <div>
-        <p className={done ? "text-slate-400 line-through" : "text-slate-100"}>
+        <p className={done ? "text-muted line-through" : "text-text"}>
           {label}
         </p>
-        <p className="text-[10px] text-slate-400">{meta}</p>
+        <p className="text-[10px] text-muted">{meta}</p>
       </div>
     </motion.li>
   )
@@ -274,13 +271,13 @@ function Chip({
 }) {
   if (variant === "ghost") {
     return (
-      <span className="rounded-full border border-slate-600 bg-slate-950/70 px-2 py-[2px] text-[10px] text-slate-200">
+      <span className="rounded-full border border-border bg-surface/70 px-2 py-[2px] text-[10px] text-text">
         {children}
       </span>
     )
   }
   return (
-    <span className="rounded-full border border-lime-300/60 bg-slate-950/70 px-2 py-[2px] text-[10px] text-lime-100">
+    <span className="rounded-full border border-accent/40 bg-surface/70 px-2 py-[2px] text-[10px] text-accent">
       {children}
     </span>
   )

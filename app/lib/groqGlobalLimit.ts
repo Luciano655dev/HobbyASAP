@@ -1,6 +1,19 @@
 import { getRedis } from "@/app/lib/redis"
 
 const GLOBAL_DAILY_LIMIT = 2_500_000
+const REDIS_TIMEOUT_MS = 2000
+
+async function withTimeout<T>(promise: Promise<T>, ms: number) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error("Redis timeout")), ms)
+  })
+  try {
+    return await Promise.race([promise, timeout])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10) // YYYY-MM-DD
@@ -13,8 +26,14 @@ export async function checkGlobalTokenBudget() {
   const day = todayKey()
   const key = `groq:tokens:global:${day}`
 
-  const usedRaw = await redis.get(key)
-  const used = Number(usedRaw ?? 0)
+  let used = 0
+  try {
+    const usedRaw = await withTimeout(redis.get(key), REDIS_TIMEOUT_MS)
+    used = Number(usedRaw ?? 0)
+  } catch (err) {
+    console.error("Redis unavailable for token budget check:", err)
+    return { allowed: true, redis: null as any, key: "" }
+  }
 
   if (used >= GLOBAL_DAILY_LIMIT) {
     return { allowed: false }
@@ -31,8 +50,12 @@ export async function addGlobalTokens(
   if (!redis || !used) return
 
   const ttl = 60 * 60 * 48 // 48h just to cross midnight safely
-  const multi = redis.multi()
-  multi.incrby(key, used)
-  multi.expire(key, ttl)
-  await multi.exec()
+  try {
+    const multi = redis.multi()
+    multi.incrby(key, used)
+    multi.expire(key, ttl)
+    await withTimeout(multi.exec(), REDIS_TIMEOUT_MS)
+  } catch (err) {
+    console.error("Redis unavailable for token usage update:", err)
+  }
 }

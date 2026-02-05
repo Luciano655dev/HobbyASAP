@@ -1,6 +1,13 @@
 import "./globals.css"
 import Navbar from "@/components/layout/Navbar"
 import Footer from "@/components/layout/Footer"
+import { Nunito } from "next/font/google"
+
+const nunito = Nunito({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-app",
+})
 
 export default function RootLayout({
   children,
@@ -8,8 +15,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-slate-950 text-slate-50 relative">
+    <html
+      lang="en"
+      className={nunito.variable}
+      suppressHydrationWarning
+      data-theme="light"
+    >
+      <body className="min-h-screen bg-app-bg text-text relative">
         <Navbar />
 
         <main>{children}</main>
@@ -25,6 +37,7 @@ export const metadata = {
   description:
     "AI-powered learning paths, masterclasses, quests, Levels, and streaks.",
   icons: {
-    icon: "/logo.png",
+    icon: "/Logo.png",
+    apple: "/Logo.png",
   },
 }
