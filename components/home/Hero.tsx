@@ -65,7 +65,7 @@ export default function Hero() {
             variants={container}
           >
             Learn any hobby
-            <span className="block bg-gradient-to-r from-accent-strong via-accent to-accent bg-clip-text text-transparent">
+            <span className="block bg-linear-to-r from-accent-strong via-accent to-accent bg-clip-text text-transparent">
               as fast and as easily as possible
             </span>
           </motion.h1>
@@ -123,7 +123,7 @@ export default function Hero() {
           {/* header */}
           <div className="mb-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-accent-strong text-lg text-white">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-linear-to-br from-accent to-accent-strong text-lg text-white">
                 🎸
               </div>
               <div>
@@ -139,7 +139,7 @@ export default function Hero() {
               <p className="text-muted">Today XP</p>
               <p className="font-semibold text-accent">+30</p>
               <div className="mt-1 h-1.5 w-20 rounded-full bg-surface-2">
-                <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-accent to-accent-strong" />
+                <div className="h-full w-2/3 rounded-full bg-linear-to-r from-accent to-accent-strong" />
               </div>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function Hero() {
                 <p className="text-[11px] font-semibold text-accent">
                   Today - 25 minute session
                 </p>
-                <span className="rounded-full bg-surface/70 px-2 py-[2px] text-[10px] text-accent">
+                <span className="rounded-full bg-surface/70 px-2 py-0.5 text-[10px] text-accent">
                   Daily quests
                 </span>
               </div>
@@ -221,7 +221,7 @@ export default function Hero() {
             </motion.div>
 
             <motion.button
-              className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-accent to-accent-strong px-4 py-2 text-xs font-semibold text-white shadow-md shadow-accent/40 hover:brightness-110"
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-linear-to-r from-accent to-accent-strong px-4 py-2 text-xs font-semibold text-white shadow-md shadow-accent/40 hover:brightness-110"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -240,7 +240,7 @@ function HeroTask(props: { label: string; meta: string; done?: boolean }) {
   return (
     <motion.li className="flex items-start gap-2" variants={taskItem}>
       <div
-        className={`mt-[2px] flex h-4 w-4 items-center justify-center rounded-md border text-[9px] ${
+        className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-md border text-[9px] ${
           done
             ? "border-accent bg-accent text-white"
             : "border-border bg-surface text-muted"
@@ -271,13 +271,13 @@ function Chip({
 }) {
   if (variant === "ghost") {
     return (
-      <span className="rounded-full border border-border bg-surface/70 px-2 py-[2px] text-[10px] text-text">
+      <span className="rounded-full border border-border bg-surface/70 px-2 py-0.5 text-[10px] text-text">
         {children}
       </span>
     )
   }
   return (
-    <span className="rounded-full border border-accent/40 bg-surface/70 px-2 py-[2px] text-[10px] text-accent">
+    <span className="rounded-full border border-accent/40 bg-surface/70 px-2 py-0.5 text-[10px] text-accent">
       {children}
     </span>
   )
