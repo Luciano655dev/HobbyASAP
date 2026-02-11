@@ -88,7 +88,7 @@ export default function PathwayPreview() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-0.5 text-accent">✓</span>
-                <span>Optional masterclasses for deeper practice.</span>
+                <span>Optional deep dives for deeper practice.</span>
               </li>
             </ul>
 

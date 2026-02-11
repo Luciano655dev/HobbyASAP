@@ -101,7 +101,7 @@ export async function POST(req: Request) {
     const userPrompt =
       `Here is the current hobby path:\n\n` +
       `${planSummary}\n\n` +
-      `Here are masterclasses / in-depth lessons (if any):\n\n` +
+      `Here are in-depth lessons (if any):\n\n` +
       `${lessonsSummary || "(no extra lessons yet)"}\n\n` +
       `Here is recent Q&A history for this user:\n\n` +
       `${historySummary || "(no previous questions)"}\n\n` +

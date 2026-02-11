@@ -22,33 +22,6 @@ const cardVariants: Variants = {
   },
 }
 
-const leftVariants: Variants = {
-  hidden: { opacity: 0, x: -12 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.25, ease: "easeOut" },
-  },
-}
-
-const rightVariants: Variants = {
-  hidden: { opacity: 0, x: 12 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.25, ease: "easeOut", delay: 0.05 },
-  },
-}
-
-const iconVariants: Variants = {
-  hidden: { scale: 0.9, opacity: 0 },
-  visible: {
-    scale: 1,
-    opacity: 1,
-    transition: { duration: 0.2, ease: "easeOut" },
-  },
-}
-
 export default function PlanHeader({
   plan,
   themeFrom,
@@ -60,19 +33,15 @@ export default function PlanHeader({
 
   return (
     <motion.div
-      className="rounded-2xl border border-border p-5 sm:p-6 flex flex-col gap-4 shadow-lg shadow-accent/10"
+      className="rounded-2xl border border-border p-4 sm:p-5 shadow-sm"
       style={{
         backgroundImage: `
           linear-gradient(
             to bottom right, 
-            var(--header-overlay-from),
-            var(--header-overlay-to)
+            color-mix(in oklab, ${themeFrom} 5%, var(--surface)),
+            color-mix(in oklab, ${themeTo} 5%, var(--surface))
           ),
-          linear-gradient(
-            to bottom right, 
-            ${themeFrom}, 
-            ${themeTo}
-          )
+          linear-gradient(to bottom right, var(--surface), var(--surface))
         `,
       }}
       variants={cardVariants}
@@ -80,56 +49,41 @@ export default function PlanHeader({
       whileInView="visible"
       viewport={{ once: true, amount: 0.35 }}
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        {/* Left: icon + title */}
-        <motion.div
-          className="flex items-center gap-3 sm:gap-4"
-          variants={leftVariants}
-        >
-          <motion.div
-            className="h-14 w-14 rounded-3xl bg-surface/70 flex items-center justify-center text-3xl shadow-sm"
-            variants={iconVariants}
-          >
-            {icon}
-          </motion.div>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-text">
-              {plan.hobby} ·{" "}
-              <span className="text-accent">{plan.level}</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-muted mt-1">
-              This path was fully designed by the AI for this hobby and level.
-              Complete modules to progress, then stack deeper masterclasses or
-              deep dives below when you want to go further.
-            </p>
+      <div className="flex items-start gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-surface-2 text-2xl">
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-lg font-semibold text-text sm:text-xl">
+            {plan.hobby}
+          </h2>
+          <p className="mt-0.5 text-xs text-muted sm:text-sm">{plan.level}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+            <span className="rounded-full border border-border bg-surface px-2 py-1 text-muted">
+              {plan.modules.length} modules
+            </span>
+            {dailySessionCompleted ? (
+              <span className="rounded-full border border-accent/40 bg-accent-soft px-2 py-1 text-accent">
+                Advanced today
+              </span>
+            ) : null}
           </div>
-        </motion.div>
+        </div>
+      </div>
 
-        {/* Right: progress */}
-        <motion.div
-          className="flex flex-col items-end gap-2 w-full sm:w-auto"
-          variants={rightVariants}
-        >
-          <div className="w-full sm:w-60">
-            <div className="flex items-center justify-between text-[11px] text-text mb-1">
-              <span>Path progress</span>
-              <span>{progress}%</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-surface/70 overflow-hidden border border-border">
-              <motion.div
-                className="h-full bg-accent"
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-              />
-            </div>
-          </div>
-          {dailySessionCompleted && (
-            <p className="text-[11px] text-accent">
-              ✅ Path advanced today!
-            </p>
-          )}
-        </motion.div>
+      <div className="mt-4">
+        <div className="mb-1.5 flex items-center justify-between text-xs text-muted">
+          <span>Progress</span>
+          <span className="font-semibold text-text">{progress}%</span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+          <motion.div
+            className="h-full bg-accent"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+          />
+        </div>
       </div>
     </motion.div>
   )

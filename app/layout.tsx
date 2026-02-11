@@ -1,6 +1,5 @@
 import "./globals.css"
-import Navbar from "@/components/layout/Navbar"
-import Footer from "@/components/layout/Footer"
+import RootChrome from "@/components/layout/RootChrome"
 import { Nunito } from "next/font/google"
 
 const nunito = Nunito({
@@ -22,11 +21,7 @@ export default function RootLayout({
       data-theme="light"
     >
       <body className="min-h-screen bg-app-bg text-text relative">
-        <Navbar />
-
-        <main>{children}</main>
-
-        <Footer />
+        <RootChrome>{children}</RootChrome>
       </body>
     </html>
   )
@@ -35,7 +30,7 @@ export default function RootLayout({
 export const metadata = {
   title: "HobbyASAP",
   description:
-    "AI-powered learning paths, masterclasses, quests, Levels, and streaks.",
+    "AI-powered learning paths, deep dives, quests, levels, and streaks.",
   icons: {
     icon: "/Logo.png",
     apple: "/Logo.png",

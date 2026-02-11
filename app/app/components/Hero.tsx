@@ -78,8 +78,8 @@ export default function Hero({ streak, xpStats }: HeroProps) {
         className="text-sm sm:text-base text-muted max-w-2xl mx-auto"
       >
         Type any hobby and let the AI design a custom learning path with
-        read-and-quiz modules, plus persistent masterclasses, deep dives, and
-        the ability to ask questions as you go.
+        read-and-quiz modules, persistent deep dives, and the ability to ask
+        questions as you go.
       </motion.p>
 
       <motion.div

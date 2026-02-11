@@ -80,7 +80,7 @@ export default function FAQ() {
 
         <FAQCard title="Is this just a chat with AI?">
           No. The AI is only the engine. The real value is the structure:
-          quests, roadmaps, masterclasses, XP, streaks and a full learning
+          quests, roadmaps, deep dives, XP, streaks and a full learning
           environment designed to keep you consistent.
         </FAQCard>
       </motion.div>

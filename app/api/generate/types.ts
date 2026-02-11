@@ -51,9 +51,9 @@ export interface HobbyPlan {
   modules: Module[]
 }
 
-// ---------- NEW: lesson types for masterclasses / in-depth ----------
+// ---------- NEW: lesson types for deep dives ----------
 
-export type LessonKind = "masterclass" | "inDepth"
+export type LessonKind = "inDepth"
 
 export interface LessonSection {
   heading: string
@@ -72,7 +72,11 @@ export interface Lesson {
   hobby: string
   summary: string
   sections: LessonSection[]
-  practiceIdeas: string[]
+  practiceIdeas?: string[]
+  sourceSessionId?: string
+  sourceCourseHobby?: string
+  sourceModuleId?: string
+  sourceModuleTitle?: string
   recommendedResources?: {
     title: string
     type: ResourceType

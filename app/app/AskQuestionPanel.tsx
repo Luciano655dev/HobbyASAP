@@ -33,7 +33,7 @@ interface AskQuestionPanelProps {
   // Hook into openLesson("inDepth", topic)
   onInDepthRequest?: (topic: string) => void
 
-  // whether a lesson (masterclass / in-depth) is currently generating
+  // whether an in-depth lesson is currently generating
   lessonLoading?: boolean
 }
 
@@ -203,8 +203,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
     }
   }
 
-  const inDepthDisabled = (kind: "latest" | "history") =>
-    !onInDepthRequest || lessonLoading
+  const inDepthDisabled = !onInDepthRequest || lessonLoading
 
   return (
     <section className="mb-16 space-y-4">
@@ -215,7 +214,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
             Ask a question about your path
           </h2>
           <p className="text-[11px] sm:text-xs text-muted mt-0.5">
-            Ask anything about your modules, quizzes, or masterclasses. I’ll
+            Ask anything about your modules, quizzes, or deep dives. I’ll
             use your current path, lessons, and previous questions as context.
           </p>
         </div>
@@ -257,7 +256,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
               {loading ? "Thinking..." : "Ask about this path"}
             </button>
             <p className="text-[10px] text-muted">
-              Context: modules · masterclasses · previous Q&A.
+              Context: modules · deep dives · previous Q&A.
             </p>
           </div>
 
@@ -354,13 +353,13 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
             {latest.inDepthTopic && onInDepthRequest && (
               <button
                 type="button"
-                disabled={inDepthDisabled("latest")}
+                disabled={inDepthDisabled}
                 onClick={() =>
-                  !inDepthDisabled("latest") &&
+                  !inDepthDisabled &&
                   onInDepthRequest(latest.inDepthTopic!)
                 }
                 className={`inline-flex items-center justify-center rounded-xl bg-accent-strong px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-accent/40 hover:bg-accent hover:shadow-md active:translate-y-[1px] transition ${
-                  inDepthDisabled("latest")
+                  inDepthDisabled
                     ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-accent-strong hover:shadow-sm"
                     : ""
                 }`}
@@ -460,13 +459,13 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
                   {item.inDepthTopic && onInDepthRequest && (
                     <button
                       type="button"
-                      disabled={inDepthDisabled("history")}
+                      disabled={inDepthDisabled}
                       onClick={() =>
-                        !inDepthDisabled("history") &&
+                        !inDepthDisabled &&
                         onInDepthRequest(item.inDepthTopic!)
                       }
                       className={`mt-1 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-text hover:bg-surface-2 ${
-                        inDepthDisabled("history")
+                        inDepthDisabled
                           ? "opacity-50 cursor-not-allowed hover:bg-surface"
                           : ""
                       }`}

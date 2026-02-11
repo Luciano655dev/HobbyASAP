@@ -1,15 +1,15 @@
 import { Lesson } from "../generate/types"
 
 export const jsonLessonExample: Lesson = {
-  kind: "masterclass",
-  title: "Masterclass – Clean Alternate Picking",
+  kind: "inDepth",
+  title: "Deep Dive – Clean Alternate Picking",
   topic: "alternate picking for guitar",
   goal: "Help the learner understand and practice clean alternate picking at slow to medium speeds without tension.",
   estimatedTimeMinutes: 40,
   level: "some experience",
   hobby: "electric guitar",
   summary:
-    "This masterclass breaks alternate picking into posture, motion, rhythm, and progressive drills so the player can build clean and relaxed technique.",
+    "This deep dive breaks alternate picking into posture, motion, rhythm, and progressive drills so the player can build clean and relaxed technique.",
 
   sections: [
     {
@@ -28,12 +28,6 @@ export const jsonLessonExample: Lesson = {
         "Use a medium pick to avoid getting stuck in the strings.",
       ],
     },
-  ],
-
-  practiceIdeas: [
-    "5 minutes: mute the strings and play constant down-up strokes at 60 BPM.",
-    "10 minutes: play one note per beat on a single string, then two notes per beat.",
-    "10 minutes: simple 4-note patterns across two strings while keeping the motion consistent.",
   ],
 
   recommendedResources: [

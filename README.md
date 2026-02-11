@@ -9,7 +9,6 @@ Type a hobby → get a full layout with:
 - 🎯 Sections
 - 📅 Roadmaps
 - ✔️ Daily micro‑tasks
-- 🧠 Masterclasses
 - 🔍 In‑depth lessons
 - 💬 Q&A sessions
 - ⭐ XP, levels, streaks
@@ -30,9 +29,9 @@ Everything happens on a single page, with lessons stacking as you explore.
 - Gear recommendations
 - Beginner → advanced progression
 
-### 📚 Persistent Masterclasses & Deep Dives
+### 📚 Persistent Deep Dives
 
-Click **Masterclass** or **In depth** on tasks, phases, or weeks to generate stacked lessons that stay on the page.
+Click **In depth** on tasks, phases, or weeks to generate stacked lessons that stay on the page.
 
 ### 💬 Follow‑up Q&A
 

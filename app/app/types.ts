@@ -61,7 +61,28 @@ export interface HistoryItem {
 }
 
 // Lesson
-export type LessonKind = "masterclass" | "inDepth"
+export type LessonKind = "inDepth"
+
+export interface InDepthQuizQuestionContext {
+  question: string
+  options: string[]
+  answerIndex: number
+  correctAnswer: string
+  explanation: string
+}
+
+export interface ModuleInDepthContext {
+  moduleId: string
+  moduleType: ModuleType
+  title: string
+  summary: string
+  estimatedMinutes: number
+  xp: number
+  readContent?: string[]
+  readKeyTakeaways?: string[]
+  quizPrompt?: string
+  quizQuestions?: InDepthQuizQuestionContext[]
+}
 
 export interface LessonSection {
   heading: string
@@ -80,7 +101,11 @@ export interface Lesson {
   hobby: string
   summary: string
   sections: LessonSection[]
-  practiceIdeas: string[]
+  practiceIdeas?: string[]
+  sourceSessionId?: string
+  sourceCourseHobby?: string
+  sourceModuleId?: string
+  sourceModuleTitle?: string
   recommendedResources?: {
     title: string
     type: ResourceType

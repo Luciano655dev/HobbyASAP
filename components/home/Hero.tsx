@@ -73,9 +73,9 @@ export default function Hero() {
             className="mt-3 text-sm text-muted sm:text-base"
             variants={container}
           >
-            HobbyASAP gives you a roadmap, daily quests, streaks and masterclass
-            style deep dives for any hobby, from guitar to coding to fishing. No
-            more “what now” feeling.
+            HobbyASAP gives you a roadmap, daily quests, streaks and deep dives
+            for any hobby, from guitar to coding to fishing. No more “what now”
+            feeling.
           </motion.p>
         </div>
 
@@ -181,7 +181,7 @@ export default function Hero() {
                 />
               </motion.ul>
               <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
-                <Chip>Masterclass: clean chord changes</Chip>
+                <Chip>Deep dive: clean chord changes</Chip>
                 <Chip variant="ghost">In depth: rhythm feel tips</Chip>
               </div>
             </motion.div>

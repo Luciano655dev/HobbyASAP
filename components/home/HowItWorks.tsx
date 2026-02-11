@@ -77,8 +77,8 @@ export default function HowItWorks() {
         />
         <StepCard
           step="3"
-          title="Go into master mode"
-          text="Tap masterclass or in depth on any part to unlock deeper explanations, drills and examples."
+          title="Go deeper instantly"
+          text="Tap in depth on any part to unlock deeper explanations, drills and examples."
           pill="Deep dive mode"
           color="violet"
         />

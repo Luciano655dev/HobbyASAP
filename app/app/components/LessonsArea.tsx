@@ -14,7 +14,7 @@ interface LessonsAreaProps {
   completedTaskIds: string[]
   onToggleTask: (id: string) => void
   onRemoveLesson: (index: number) => void
-  onOpenLesson: (kind: "masterclass" | "inDepth", topic: string) => void
+  onOpenLesson: (kind: "inDepth", topic: string) => void
   lessonsEndRef: RefObject<HTMLDivElement | null>
 }
 
@@ -96,7 +96,7 @@ export default function LessonsArea({
     <section className="mb-16 space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-sm sm:text-base font-semibold text-text">
-          Masterclasses & deep dives
+          Deep dives
         </h2>
         {lessonLoading && (
           <p className="text-[11px] text-accent">
@@ -112,7 +112,7 @@ export default function LessonsArea({
 
       {lessons.length === 0 && !lessonLoading && !lessonError && (
         <p className="text-xs sm:text-sm text-muted">
-          Click any Masterclass or In depth button in your path above to add
+          Click any In depth button in your path above to add
           detailed course-style lessons here. They will stay on the page so you
           can scroll, re-read, and work through the tasks.
         </p>
@@ -154,7 +154,7 @@ export default function LessonsArea({
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-muted">
-                    {lesson.kind === "masterclass" ? "Masterclass" : "In depth"}
+                    In depth
                   </p>
                   <h3 className="mt-1 text-lg font-semibold text-text">
                     {lesson.title}
