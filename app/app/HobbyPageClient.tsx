@@ -29,6 +29,8 @@ export default function HobbyPageClient() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [lessonLoading, setLessonLoading] = useState(false)
   const [questions, setQuestions] = useState<QAItem[]>([])
+  const [chatThreads, setChatThreads] = useState<SavedSession["chatThreads"]>([])
+  const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null)
 
@@ -91,6 +93,8 @@ export default function HobbyPageClient() {
       setPlan(session.plan)
       setLessons(session.lessons)
       setQuestions(session.questions)
+      setChatThreads(session.chatThreads ?? [])
+      setActiveChatId(session.activeChatId ?? null)
       setStreak(session.streak)
       setSessionId(session.id)
       setSessionCreatedAt(session.createdAt)
@@ -129,6 +133,8 @@ export default function HobbyPageClient() {
       completedTaskIds,
       streak,
       lessons,
+      chatThreads,
+      activeChatId,
       questions,
     }
 
@@ -139,6 +145,8 @@ export default function HobbyPageClient() {
     completedTaskIds,
     streak,
     lessons,
+    chatThreads,
+    activeChatId,
     questions,
     sessionId,
     sessionCreatedAt,
@@ -209,6 +217,8 @@ export default function HobbyPageClient() {
           completedTaskIds,
           streak,
           lessons: nextLessons,
+          chatThreads,
+          activeChatId,
           questions,
         })
       }

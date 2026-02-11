@@ -23,6 +23,14 @@ export const INITIAL_STREAK: StreakState = {
   lastActiveDate: null,
 }
 
+export interface ChatThread {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  questions: QAItem[]
+}
+
 export interface SavedSession {
   id: string
   createdAt: string
@@ -33,7 +41,74 @@ export interface SavedSession {
   completedTaskIds: string[]
   streak: StreakState
   lessons: Lesson[]
+  chatThreads?: ChatThread[]
+  activeChatId?: string | null
+  // Legacy mirror for compatibility with existing UI/code paths.
   questions: QAItem[]
+}
+
+function buildFallbackChatTitle(questions: QAItem[]): string {
+  const firstQuestion = questions[0]?.question?.trim()
+  if (!firstQuestion) return "New chat"
+  return firstQuestion.length > 48
+    ? `${firstQuestion.slice(0, 48)}...`
+    : firstQuestion
+}
+
+function normalizeSession(raw: SavedSession): SavedSession {
+  const nowIso = new Date().toISOString()
+  const legacyQuestions = Array.isArray(raw.questions) ? raw.questions : []
+  const incomingThreads = Array.isArray(raw.chatThreads)
+    ? raw.chatThreads
+        .filter((thread) => thread && typeof thread.id === "string")
+        .map((thread) => ({
+          id: thread.id,
+          title:
+            typeof thread.title === "string" && thread.title.trim()
+              ? thread.title.trim()
+              : buildFallbackChatTitle(
+                  Array.isArray(thread.questions) ? thread.questions : []
+                ),
+          createdAt:
+            typeof thread.createdAt === "string" && thread.createdAt
+              ? thread.createdAt
+              : nowIso,
+          updatedAt:
+            typeof thread.updatedAt === "string" && thread.updatedAt
+              ? thread.updatedAt
+              : nowIso,
+          questions: Array.isArray(thread.questions) ? thread.questions : [],
+        }))
+    : []
+
+  const chatThreads =
+    incomingThreads.length > 0
+      ? incomingThreads
+      : [
+          {
+            id: `chat_legacy_${raw.id}`,
+            title: buildFallbackChatTitle(legacyQuestions),
+            createdAt: raw.createdAt || nowIso,
+            updatedAt: raw.createdAt || nowIso,
+            questions: legacyQuestions,
+          },
+        ]
+
+  const activeChatId =
+    typeof raw.activeChatId === "string" &&
+    chatThreads.some((thread) => thread.id === raw.activeChatId)
+      ? raw.activeChatId
+      : chatThreads[0]?.id ?? null
+
+  const activeChatQuestions =
+    chatThreads.find((thread) => thread.id === activeChatId)?.questions ?? []
+
+  return {
+    ...raw,
+    chatThreads,
+    activeChatId,
+    questions: activeChatQuestions,
+  }
 }
 
 export function useSessionsHistory() {
@@ -42,7 +117,9 @@ export function useSessionsHistory() {
     try {
       const raw = localStorage.getItem(LS_SESSIONS_KEY)
       const parsed = raw ? JSON.parse(raw) : []
-      return Array.isArray(parsed) ? parsed : []
+      return Array.isArray(parsed)
+        ? parsed.map((session) => normalizeSession(session as SavedSession))
+        : []
     } catch {
       return []
     }
@@ -70,8 +147,9 @@ export function useSessionsHistory() {
   }, [history])
 
   const saveSnapshot = useCallback((snapshot: SavedSession) => {
+    const normalized = normalizeSession(snapshot)
     setHistory((prev) => {
-      return [snapshot, ...prev.filter((s) => s.id !== snapshot.id)].slice(0, 20)
+      return [normalized, ...prev.filter((s) => s.id !== normalized.id)].slice(0, 20)
     })
   }, [])
 

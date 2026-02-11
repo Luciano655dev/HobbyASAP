@@ -71,6 +71,7 @@ export default function NewCoursePage() {
       const plan = data.plan as HobbyPlan
       const id = `${trimmed.toLowerCase()}_${Date.now()}`
       const createdAt = new Date().toISOString()
+      const chatId = `chat_${Date.now()}`
 
       const snapshot: SavedSession = {
         id,
@@ -82,6 +83,16 @@ export default function NewCoursePage() {
         completedTaskIds: [],
         streak: INITIAL_STREAK,
         lessons: [],
+        chatThreads: [
+          {
+            id: chatId,
+            title: "New chat",
+            createdAt,
+            updatedAt: createdAt,
+            questions: [],
+          },
+        ],
+        activeChatId: chatId,
         questions: [],
       }
 

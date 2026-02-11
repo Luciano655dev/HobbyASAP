@@ -5,6 +5,19 @@ import { useSessionsHistory } from "../hooks/useSessionsHistory"
 import { useGlobalXpStats } from "../hooks/useXpStats"
 import { LS_CURRENT_SESSION_KEY, SESSIONS_UPDATED_EVENT } from "../constants"
 
+function getSessionChatCount(session: {
+  chatThreads?: { questions: { id: string }[] }[]
+  questions: { id: string }[]
+}) {
+  if (Array.isArray(session.chatThreads) && session.chatThreads.length > 0) {
+    return session.chatThreads.reduce(
+      (total, thread) => total + thread.questions.length,
+      0
+    )
+  }
+  return session.questions.length
+}
+
 export default function ProfilePage() {
   const { history } = useSessionsHistory()
   const xpStats = useGlobalXpStats(history)
@@ -58,7 +71,7 @@ export default function ProfilePage() {
       totalModules += modules.length
       completedModules += completedModuleCount
       totalDeepDives += session.lessons.length
-      totalAiChats += session.questions.length
+      totalAiChats += getSessionChatCount(session)
       readModules += modules.filter((m) => m.type === "read").length
       quizModules += modules.filter((m) => m.type === "quiz").length
     }
@@ -101,7 +114,7 @@ export default function ProfilePage() {
       readModules,
       quizModules,
       deepDives: currentSession.lessons.length,
-      aiChats: currentSession.questions.length,
+      aiChats: getSessionChatCount(currentSession),
     }
   }, [currentSession])
 
@@ -120,7 +133,7 @@ export default function ProfilePage() {
         moduleCompletions * 4 +
         lessonCompletions * 2 +
         session.lessons.length +
-        session.questions.length
+        getSessionChatCount(session)
 
       return { session, score, moduleCompletions, lessonCompletions }
     })
@@ -250,7 +263,7 @@ export default function ProfilePage() {
               {mostFocusedCourse.moduleCompletions} modules complete,{" "}
               {mostFocusedCourse.lessonCompletions} lesson tasks,{" "}
               {mostFocusedCourse.session.lessons.length} generated lessons,{" "}
-              {mostFocusedCourse.session.questions.length} AI chats.
+              {getSessionChatCount(mostFocusedCourse.session)} AI chats.
             </p>
           </div>
         )}

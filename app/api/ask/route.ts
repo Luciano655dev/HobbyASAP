@@ -16,6 +16,13 @@ interface HistoryItem {
   answer: string
 }
 
+interface ContextSelection {
+  includeCourse?: boolean
+  moduleIds?: string[]
+  deepDiveIndexes?: number[]
+  includeHistory?: boolean
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null)
@@ -29,21 +36,14 @@ export async function POST(req: Request) {
       plan?: HobbyPlan | null
       lessons?: Lesson[] | null
       history?: HistoryItem[] | null
+      contextSelection?: ContextSelection | null
     }
+    const contextSelection = (body as { contextSelection?: ContextSelection | null })
+      .contextSelection
 
     if (!question || typeof question !== "string" || !question.trim()) {
       return NextResponse.json(
         { error: "A non-empty question is required." },
-        { status: 400 }
-      )
-    }
-
-    if (!plan) {
-      return NextResponse.json(
-        {
-          error:
-            "No plan context provided. Generate a path first, then ask a question about it.",
-        },
         { status: 400 }
       )
     }
@@ -57,7 +57,11 @@ export async function POST(req: Request) {
     }
 
     // === GLOBAL TOKEN LIMIT CHECK ===
-    const budget: any = await checkGlobalTokenBudget()
+    const budget = (await checkGlobalTokenBudget()) as {
+      allowed: boolean
+      redis: unknown
+      key: string
+    }
     if (!budget.allowed) {
       return NextResponse.json(
         {
@@ -70,17 +74,71 @@ export async function POST(req: Request) {
 
     const safeLessons = Array.isArray(lessons) ? lessons : []
     const safeHistory = Array.isArray(history) ? history.slice(-5) : [] // last 5 QAs max
+    const includeCourse = !!contextSelection?.includeCourse
+    const selectedModuleIds = Array.isArray(contextSelection?.moduleIds)
+      ? contextSelection!.moduleIds!.filter((x) => typeof x === "string" && x.trim())
+      : []
+    const selectedDeepDiveIndexes = Array.isArray(contextSelection?.deepDiveIndexes)
+      ? contextSelection!.deepDiveIndexes!.filter(
+          (x) => Number.isInteger(x) && x >= 0
+        )
+      : []
+    const includeHistory = !!contextSelection?.includeHistory
 
-    const planSummary = buildPlanSummary(plan)
-    const lessonsSummary = buildLessonsSummary(safeLessons)
-    const historySummary = buildHistorySummary(safeHistory)
+    const selectedContextCount =
+      Number(includeCourse) +
+      Number(selectedModuleIds.length > 0) +
+      Number(selectedDeepDiveIndexes.length > 0) +
+      Number(includeHistory)
+
+    if (selectedContextCount === 0) {
+      return NextResponse.json(
+        { error: "Select at least one context before asking the AI." },
+        { status: 400 }
+      )
+    }
+
+    if (!plan && (includeCourse || selectedModuleIds.length > 0)) {
+      return NextResponse.json(
+        { error: "Course/module context is unavailable right now." },
+        { status: 400 }
+      )
+    }
+
+    if (!safeLessons.length && selectedDeepDiveIndexes.length > 0) {
+      return NextResponse.json(
+        { error: "Deep dive context is unavailable right now." },
+        { status: 400 }
+      )
+    }
+
+    const contextBlocks: string[] = []
+    if (includeCourse && plan) {
+      contextBlocks.push(buildCourseSummary(plan))
+    }
+    if (selectedModuleIds.length > 0 && plan) {
+      contextBlocks.push(buildModulesSummary(plan, selectedModuleIds))
+    }
+    if (selectedDeepDiveIndexes.length > 0) {
+      contextBlocks.push(
+        buildSelectedDeepDivesSummary(safeLessons, selectedDeepDiveIndexes)
+      )
+    }
+    if (includeHistory) {
+      const historySummary = buildHistorySummary(safeHistory)
+      contextBlocks.push(
+        historySummary
+          ? `=== Recent Q&A history ===\n${historySummary}`
+          : "=== Recent Q&A history ===\n(no previous questions)"
+      )
+    }
 
     // We force JSON output with answer + tasks + inDepthTopic
     const systemPrompt =
       "You are HobbyASAP Coach, an expert hobby mentor.\n" +
-      "- You answer questions using ONLY the provided path, lessons, and Q&A history.\n" +
+      "- You answer questions using ONLY the selected context provided by the user.\n" +
       "- Explain in clear, simple language and give concrete, actionable steps.\n" +
-      "- You are allowed to add extra tiny practice tasks that fit the path, but It is not obrigatory.\n" +
+      "- You are allowed to add extra tiny practice tasks when useful, but it is optional.\n" +
       "- If user seems to want more depth on a specific topic, you may suggest an inDepthTopic.\n\n" +
       "You MUST respond with VALID JSON ONLY (no markdown, no prose around it) in this exact shape:\n" +
       `{
@@ -99,13 +157,9 @@ export async function POST(req: Request) {
       "- Do NOT add any extra top-level keys.\n"
 
     const userPrompt =
-      `Here is the current hobby path:\n\n` +
-      `${planSummary}\n\n` +
-      `Here are in-depth lessons (if any):\n\n` +
-      `${lessonsSummary || "(no extra lessons yet)"}\n\n` +
-      `Here is recent Q&A history for this user:\n\n` +
-      `${historySummary || "(no previous questions)"}\n\n` +
-      `Now answer this NEW question based ONLY on the content above:\n` +
+      `User-selected context:\n\n` +
+      `${contextBlocks.join("\n\n")}\n\n` +
+      `Now answer this NEW question based ONLY on the selected context above:\n` +
       `Q: ${question.trim()}\n\n` +
       `Remember to return valid JSON with fields: answer, tasks, inDepthTopic.`
 
@@ -120,7 +174,7 @@ export async function POST(req: Request) {
     })
 
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
-    const usage = (completion as any).usage
+    const usage = (completion as { usage?: { total_tokens?: number } }).usage
     const usedTokens: number = usage?.total_tokens ?? 0
     await addGlobalTokens(budget.redis, budget.key, usedTokens)
 
@@ -206,23 +260,33 @@ export async function POST(req: Request) {
 }
 
 /**
- * Turn the HobbyPlan into a compact text summary so the model has structure/context
+ * Compact summary for full-course context
  */
-function buildPlanSummary(plan: HobbyPlan): string {
-  const parts: string[] = []
+function buildCourseSummary(plan: HobbyPlan): string {
+  return [
+    "=== Course overview ===",
+    `Hobby: ${plan.hobby}`,
+    `Level: ${plan.level}`,
+    `Modules: ${plan.modules.length}`,
+  ].join("\n")
+}
 
-  parts.push(
-    `Hobby: ${plan.hobby}\nLevel: ${plan.level}\nIcon: ${plan.icon || ""}`
+/**
+ * Selected modules summary for context
+ */
+function buildModulesSummary(plan: HobbyPlan, selectedModuleIds: string[]): string {
+  const selectedModules = plan.modules.filter((module) =>
+    selectedModuleIds.includes(module.id)
   )
+  if (!selectedModules.length) return "=== Selected modules ===\n(none found)"
 
-  for (const module of plan.modules) {
+  const parts: string[] = []
+  selectedModules.forEach((module) => {
     parts.push(
       `\n=== Module: ${module.type.toUpperCase()} - ${module.title} ===`
     )
     parts.push(`Summary: ${module.summary}`)
-    parts.push(
-      `Estimated: ${module.estimatedMinutes} min | XP: ${module.xp}`
-    )
+    parts.push(`Estimated: ${module.estimatedMinutes} min | XP: ${module.xp}`)
 
     if (module.type === "read") {
       const content = (module.content || []).slice(0, 6)
@@ -231,6 +295,7 @@ function buildPlanSummary(plan: HobbyPlan): string {
           `Content:\n${content.map((x: string) => `- ${x}`).join("\n")}`
         )
       }
+
       const takeaways = (module.keyTakeaways || []).slice(0, 4)
       if (takeaways.length) {
         parts.push(`Key takeaways: ${takeaways.join(", ")}`)
@@ -244,50 +309,11 @@ function buildPlanSummary(plan: HobbyPlan): string {
         parts.push(
           `Quiz Q: ${q.question}\n  Options: ${(q.options || [])
             .slice(0, 4)
-            .join(", ")}\n  Explanation: ${q.explanation}`
+            .join(", ")}\n  Correct answer: ${
+            q.options?.[q.answerIndex] ?? ""
+          }\n  Explanation: ${q.explanation}`
         )
       }
-    }
-  }
-
-  return parts.join("\n")
-}
-
-/**
- * Lessons summary for context
- */
-function buildLessonsSummary(lessons: Lesson[]): string {
-  if (!lessons.length) return ""
-
-  const parts: string[] = []
-
-  lessons.forEach((lesson, index) => {
-    parts.push(
-      `\n=== Lesson ${index + 1}: ${lesson.kind.toUpperCase()} - ${
-        lesson.title
-      } ===`
-    )
-    parts.push(`Topic: ${lesson.topic}`)
-    parts.push(`Summary: ${lesson.summary}`)
-    parts.push(`Estimated time: ${lesson.estimatedTimeMinutes} min`)
-
-    if (lesson.sections && lesson.sections.length) {
-      const secs = lesson.sections.slice(0, 5)
-      for (const s of secs) {
-        parts.push(
-          `Section: ${s.heading}\n  Body: ${s.body}\n  Tips: ${(s.tips || [])
-            .slice(0, 4)
-            .join(", ")}\n  Examples: ${(s.examples || [])
-            .slice(0, 4)
-            .join(", ")}`
-        )
-      }
-    }
-
-    if (lesson.practiceIdeas && lesson.practiceIdeas.length) {
-      parts.push(
-        `Practice ideas: ${lesson.practiceIdeas.slice(0, 6).join(" | ")}`
-      )
     }
   })
 
@@ -295,7 +321,47 @@ function buildLessonsSummary(lessons: Lesson[]): string {
 }
 
 /**
- * Q&A history summary so user can "continue" previous questions
+ * Selected deep-dives summary for context
+ */
+function buildSelectedDeepDivesSummary(
+  lessons: Lesson[],
+  selectedIndexes: number[]
+): string {
+  const selected = selectedIndexes
+    .map((index) => ({ lesson: lessons[index], index }))
+    .filter((item) => !!item.lesson)
+
+  if (!selected.length) return "=== Selected deep dives ===\n(none found)"
+
+  const parts: string[] = []
+  selected.forEach(({ lesson, index }) => {
+    parts.push(
+      `\n=== Deep dive ${index + 1}: ${lesson!.title} ===`
+    )
+    parts.push(`Topic: ${lesson!.topic}`)
+    parts.push(`Summary: ${lesson!.summary}`)
+    parts.push(`Estimated time: ${lesson!.estimatedTimeMinutes} min`)
+
+    if (lesson!.sections?.length) {
+      lesson!.sections.slice(0, 5).forEach((section) => {
+        parts.push(
+          `Section: ${section.heading}\n  Body: ${section.body}\n  Tips: ${(
+            section.tips || []
+          )
+            .slice(0, 4)
+            .join(", ")}\n  Examples: ${(section.examples || [])
+            .slice(0, 4)
+            .join(", ")}`
+        )
+      })
+    }
+  })
+
+  return parts.join("\n")
+}
+
+/**
+ * Q&A history summary so user can continue previous questions
  */
 function buildHistorySummary(history: HistoryItem[]): string {
   if (!history.length) return ""

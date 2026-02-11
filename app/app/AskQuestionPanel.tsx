@@ -122,8 +122,20 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [completedTasks, setCompletedTasks] = useState<string[]>([])
+  const [showContextPicker, setShowContextPicker] = useState(false)
+  const [includeCourseContext, setIncludeCourseContext] = useState(false)
+  const [includeHistoryContext, setIncludeHistoryContext] = useState(false)
+  const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([])
+  const [selectedDeepDiveIndexes, setSelectedDeepDiveIndexes] = useState<number[]>(
+    []
+  )
 
   const hasContext = !!plan
+  const selectedContextCount =
+    Number(includeCourseContext) +
+    Number(includeHistoryContext) +
+    Number(selectedModuleIds.length > 0) +
+    Number(selectedDeepDiveIndexes.length > 0)
 
   // We assume parent appends new questions at the end of the array
   const latest = questions.length > 0 ? questions[questions.length - 1] : null
@@ -137,6 +149,27 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
     )
   }
 
+  function toggleModuleContext(moduleId: string) {
+    setSelectedModuleIds((prev) =>
+      prev.includes(moduleId)
+        ? prev.filter((id) => id !== moduleId)
+        : [...prev, moduleId]
+    )
+  }
+
+  function toggleDeepDiveContext(index: number) {
+    setSelectedDeepDiveIndexes((prev) =>
+      prev.includes(index) ? prev.filter((x) => x !== index) : [...prev, index]
+    )
+  }
+
+  function clearContextSelection() {
+    setIncludeCourseContext(false)
+    setIncludeHistoryContext(false)
+    setSelectedModuleIds([])
+    setSelectedDeepDiveIndexes([])
+  }
+
   async function handleAsk(e: React.FormEvent) {
     e.preventDefault()
     setError("")
@@ -147,7 +180,12 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
     }
 
     if (!plan) {
-      setError("Generate a path first so I have context.")
+      setError("Generate a path first so you can add context.")
+      return
+    }
+
+    if (selectedContextCount === 0) {
+      setError("Add at least one context before asking.")
       return
     }
 
@@ -163,11 +201,17 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
           plan,
           lessons,
           language,
-          // send history as simple Q/A pairs for context
+          // Sent as optional context pool; API includes only selected blocks.
           history: questions.map((item) => ({
             question: item.question,
             answer: item.answer,
           })),
+          contextSelection: {
+            includeCourse: includeCourseContext,
+            moduleIds: selectedModuleIds,
+            deepDiveIndexes: selectedDeepDiveIndexes,
+            includeHistory: includeHistoryContext,
+          },
         }),
       })
 
@@ -196,8 +240,8 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
       // Let the parent know about the new question so it can persist it
       onQuestionAdded(item)
       setQuestion("")
-    } catch (err: any) {
-      setError(err.message || "Something went wrong.")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong.")
     } finally {
       setLoading(false)
     }
@@ -206,16 +250,15 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
   const inDepthDisabled = !onInDepthRequest || lessonLoading
 
   return (
-    <section className="mb-16 space-y-4">
+    <section className="mb-20 space-y-4 sm:mb-16">
       {/* Title row outside card, like LessonsArea */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-sm sm:text-base font-semibold text-text">
-            Ask a question about your path
+          <h2 className="text-sm font-semibold text-text sm:text-base">
+            Ask AI
           </h2>
-          <p className="text-[11px] sm:text-xs text-muted mt-0.5">
-            Ask anything about your modules, quizzes, or deep dives. I’ll
-            use your current path, lessons, and previous questions as context.
+          <p className="mt-0.5 text-[11px] text-muted sm:text-xs">
+            Add the exact context you want, then ask your question.
           </p>
         </div>
         {!hasContext && (
@@ -226,37 +269,165 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
       </div>
 
       <motion.div
-        className="bg-surface/90 border border-border rounded-2xl p-5 sm:p-6 shadow-md"
+        className="rounded-2xl border border-border bg-surface/95 p-4 shadow-sm sm:p-6"
         variants={panelVariants}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}
       >
         {/* Ask form */}
-        <form onSubmit={handleAsk} className="flex flex-col gap-3 mb-4">
+        <form onSubmit={handleAsk} className="mb-4 flex flex-col gap-3">
+          <div className="rounded-xl border border-border bg-surface-2/60 px-3 py-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowContextPicker((prev) => !prev)}
+                className="rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-semibold text-text transition-colors hover:bg-surface-2"
+              >
+                {showContextPicker ? "Hide context" : "Add context"}
+              </button>
+              <button
+                type="button"
+                onClick={clearContextSelection}
+                disabled={selectedContextCount === 0}
+                className="rounded-full border border-border bg-surface px-3 py-1 text-[11px] text-muted hover:bg-surface-2 disabled:opacity-50"
+              >
+                Clear
+              </button>
+              <p className="text-[10px] text-muted sm:ml-auto">
+                {selectedContextCount === 0
+                  ? "No context selected"
+                  : `${selectedContextCount} context group${selectedContextCount > 1 ? "s" : ""} selected`}
+              </p>
+            </div>
+
+            {selectedContextCount > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {includeCourseContext && (
+                  <span className="rounded-full border border-accent/50 bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-accent">
+                    Course
+                  </span>
+                )}
+                {selectedModuleIds.length > 0 && (
+                  <span className="rounded-full border border-accent/50 bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-accent">
+                    Modules ({selectedModuleIds.length})
+                  </span>
+                )}
+                {selectedDeepDiveIndexes.length > 0 && (
+                  <span className="rounded-full border border-accent/50 bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-accent">
+                    Deep dives ({selectedDeepDiveIndexes.length})
+                  </span>
+                )}
+                {includeHistoryContext && (
+                  <span className="rounded-full border border-accent/50 bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-accent">
+                    Previous Q&A
+                  </span>
+                )}
+              </div>
+            )}
+
+            {showContextPicker && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-surface p-2.5 shadow-sm">
+                  <p className="mb-2 text-[11px] font-semibold text-text">General</p>
+                  <label className="flex items-center gap-2 text-xs text-text">
+                    <input
+                      type="checkbox"
+                      checked={includeCourseContext}
+                      onChange={(e) => setIncludeCourseContext(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-border accent-accent"
+                    />
+                    <span>Course overview</span>
+                  </label>
+                  <label className="mt-2 flex items-center gap-2 text-xs text-text">
+                    <input
+                      type="checkbox"
+                      checked={includeHistoryContext}
+                      onChange={(e) => setIncludeHistoryContext(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-border accent-accent"
+                    />
+                    <span>Previous Q&A</span>
+                  </label>
+                </div>
+
+                <div className="rounded-xl border border-border bg-surface p-2.5 shadow-sm">
+                  <p className="mb-2 text-[11px] font-semibold text-text">
+                    Modules ({plan.modules.length})
+                  </p>
+                  <div className="max-h-36 space-y-1 overflow-y-auto pr-1">
+                    {plan.modules.map((module) => (
+                      <label
+                        key={module.id}
+                        className="flex items-start gap-2 text-xs text-text"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedModuleIds.includes(module.id)}
+                          onChange={() => toggleModuleContext(module.id)}
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-border accent-accent"
+                        />
+                        <span className="line-clamp-2">{module.title}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-surface p-2.5 shadow-sm sm:col-span-2">
+                  <p className="mb-2 text-[11px] font-semibold text-text">
+                    Deep dives ({lessons.length})
+                  </p>
+                  {lessons.length === 0 ? (
+                    <p className="text-[11px] text-muted">
+                      No deep dives yet.
+                    </p>
+                  ) : (
+                    <div className="max-h-36 space-y-1 overflow-y-auto pr-1">
+                      {lessons.map((lesson, index) => (
+                        <label
+                          key={`${lesson.title}-${index}`}
+                          className="flex items-start gap-2 text-xs text-text"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedDeepDiveIndexes.includes(index)}
+                            onChange={() => toggleDeepDiveContext(index)}
+                            className="mt-0.5 h-3.5 w-3.5 rounded border-border accent-accent"
+                          />
+                          <span className="line-clamp-2">
+                            {lesson.title}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <textarea
-            rows={3}
+            rows={4}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder={
               hasContext
-                ? "Example: Can you clarify week 2 drills? Or how should I adapt this if I only have 30 minutes?"
-                : "Generate a path first, then ask questions about it."
+                ? "Example: Explain module 3 in simpler words and what to practice first."
+                : "Generate a path first, then add context and ask."
             }
-            className="w-full rounded-xl px-3 py-2.5 bg-surface border border-border focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent text-sm text-text placeholder:text-muted resize-none"
+            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
             disabled={!hasContext || loading}
           />
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="submit"
-              disabled={!hasContext || loading}
-              className="inline-flex items-center justify-center rounded-xl bg-accent-strong hover:bg-accent text-white font-semibold px-4 py-2 text-xs sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              disabled={!hasContext || loading || selectedContextCount === 0}
+              className="inline-flex w-full items-center justify-center rounded-xl bg-accent-strong px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:text-sm"
             >
-              {loading ? "Thinking..." : "Ask about this path"}
+              {loading ? "Thinking..." : "Ask AI"}
             </button>
-            <p className="text-[10px] text-muted">
-              Context: modules · deep dives · previous Q&A.
+            <p className="text-[10px] text-muted sm:text-right">
+              Context is only what you select.
             </p>
           </div>
 
@@ -270,7 +441,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
       {/* Latest answer - big coach card */}
         {latest && (
           <motion.div
-            className="mb-5 rounded-2xl border border-accent/40 bg-surface/90 p-4 shadow-md shadow-accent/10"
+            className="mb-5 rounded-2xl border border-accent/35 bg-linear-to-b from-surface to-surface/90 p-3.5 shadow-sm sm:p-4"
             variants={latestCardVariants}
             initial="hidden"
             whileInView="visible"
@@ -297,7 +468,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
               </button>
             </div>
 
-            <div className="rounded-xl bg-surface/70 border border-border px-3 py-2 mb-3">
+            <div className="mb-3 rounded-xl border border-border bg-surface/70 px-3 py-2">
               {renderAnswer(latest.answer)}
             </div>
 
@@ -358,13 +529,13 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
                   !inDepthDisabled &&
                   onInDepthRequest(latest.inDepthTopic!)
                 }
-                className={`inline-flex items-center justify-center rounded-xl bg-accent-strong px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-accent/40 hover:bg-accent hover:shadow-md active:translate-y-[1px] transition ${
+                className={`inline-flex items-center justify-center rounded-xl bg-accent-strong px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-accent/30 transition hover:bg-accent hover:shadow-md active:translate-y-[1px] ${
                   inDepthDisabled
                     ? "opacity-50 cursor-not-allowed active:translate-y-0 hover:bg-accent-strong hover:shadow-sm"
                     : ""
                 }`}
               >
-                🔍 In-depth on “{latest.inDepthTopic}”
+                In-depth on “{latest.inDepthTopic}”
               </button>
             )}
 
@@ -385,7 +556,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
               Previous questions
             </h3>
             <motion.div
-              className="space-y-3 max-h-52 overflow-y-auto pr-1"
+              className="max-h-64 space-y-3 overflow-y-auto pr-1 sm:max-h-52"
               variants={historyListVariants}
               initial="hidden"
               whileInView="visible"
@@ -394,7 +565,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
               {older.map((item) => (
                 <motion.div
                   key={item.id}
-                  className="rounded-2xl border border-border bg-surface/80 p-3 text-xs sm:text-sm"
+                  className="rounded-2xl border border-border bg-surface/85 p-3 text-xs shadow-sm sm:text-sm"
                   variants={historyItemVariants}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
@@ -489,9 +660,8 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
 
         {!latest && !error && (
           <p className="text-[11px] text-muted mt-1">
-            No questions yet. Ask something specific about your modules,
-            quizzes, or gear and you’ll see the answer here, sometimes with
-            extra practice tasks and an in-depth suggestion.
+            No questions yet. Add context, ask your question, and the answer
+            will appear here.
           </p>
         )}
       </motion.div>
