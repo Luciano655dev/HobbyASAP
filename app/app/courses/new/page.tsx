@@ -80,6 +80,8 @@ export default function NewCoursePage() {
         level,
         icon: plan.icon || null,
         plan,
+        sectionsGenerated: 1,
+        sectionModuleCounts: [plan.modules.length],
         completedTaskIds: [],
         streak: INITIAL_STREAK,
         lessons: [],
@@ -118,7 +120,7 @@ export default function NewCoursePage() {
         <div>
           <h1 className="text-2xl font-bold text-text">Create a new course</h1>
           <p className="mt-1 text-sm text-muted">
-            Design your path, then continue it in Current Course.
+            Generate section 1 now, then keep adding next sections later.
           </p>
         </div>
         <Link
@@ -193,7 +195,7 @@ export default function NewCoursePage() {
           disabled={loading}
           className="mt-4 w-full rounded-xl bg-accent-strong hover:bg-accent text-white font-semibold px-4 py-2.5 text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? "Designing your path..." : "Generate my path"}
+          {loading ? "Generating section 1..." : "Generate section 1"}
         </button>
 
         {error && (

@@ -36,15 +36,15 @@ export default function Navbar() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-4 text-xs text-muted sm:flex">
-            <a href="#how-it-works" className="hover:text-accent transition">
+            <Link href="/#how-it-works" className="hover:text-accent transition">
               How it works
-            </a>
-            <a href="#hobbies" className="hover:text-accent transition">
+            </Link>
+            <Link href="/#hobbies" className="hover:text-accent transition">
               Hobbies
-            </a>
-            <a href="#faq" className="hover:text-accent transition">
+            </Link>
+            <Link href="/#faq" className="hover:text-accent transition">
               FAQ
-            </a>
+            </Link>
             <ThemeToggle />
             <Link
               href="/app"

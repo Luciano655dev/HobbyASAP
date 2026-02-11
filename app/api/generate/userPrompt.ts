@@ -1,20 +1,52 @@
 import { jsonSchemaExample } from "./jsonSchemaExample"
+import { Module } from "./types"
 
-export default function getUserPrompt(hobby: string, userLevel: string) {
+interface GeneratePromptOptions {
+  existingModules?: Module[]
+}
+
+export default function getUserPrompt(
+  hobby: string,
+  userLevel: string,
+  options?: GeneratePromptOptions
+) {
+  const existingModules = Array.isArray(options?.existingModules)
+    ? options!.existingModules!
+    : []
+  const nextSectionNumber = existingModules.length > 0 ? 2 : 1
+  const sectionGoal =
+    existingModules.length > 0
+      ? "Create ONLY the next section of the path."
+      : "Create ONLY section 1 of the path."
+  const priorModulesSummary =
+    existingModules.length > 0
+      ? `\nPrevious modules already generated (continue from these, do not repeat):\n${existingModules
+          .map(
+            (module, index) =>
+              `${index + 1}. [${module.type.toUpperCase()}] ${module.title} - ${
+                module.summary
+              }`
+          )
+          .join("\n")}\n`
+      : ""
+
   return `
 You are HobbyASAP, an assistant that creates ultra clear, highly personalized and DETAILED learning plans for any hobby.
 
 Task:
-Create a complete learning plan for the hobby: "${hobby}".
+Create a learning SECTION for the hobby: "${hobby}".
 User level: "${userLevel}". Make sure the difficulty, language and tasks match this level.
+Current section target: ${nextSectionNumber}.
+${sectionGoal}
+${priorModulesSummary}
 
 You MUST return valid JSON that matches EXACTLY this structure (keys, nesting and types):
 
 ${JSON.stringify(jsonSchemaExample, null, 2)}
 
-You will build a Duolingo-style PATH of modules in the "modules" array:
+You will build a Duolingo-style SECTION of modules in the "modules" array:
 
-- The path should feel like a sequence the learner can move through.
+- The section should feel like a sequence the learner can move through.
 - Mix "read" modules (new content) and "quiz" modules (small checks).
 - Keep the order from easiest to harder.
 - Use clear, friendly titles that feel like steps on a path.
@@ -60,10 +92,10 @@ You will build a Duolingo-style PATH of modules in the "modules" array:
 🧩 How to use "modules":
 Use modules like building blocks:
 
-- Create 12-20 total modules.
+- Create 8-12 modules for THIS section only.
 - Around 70% "read" modules and 30% "quiz" modules.
 - Every module must include:
-  - "id": unique (use "module-1", "module-2", ... in order).
+  - "id": unique INSIDE THIS SECTION (use "module-1", "module-2", ... in order).
   - "title": short, clear, motivating.
   - "summary": 1-2 sentences describing what they learn or check.
   - "estimatedMinutes": realistic (5-20).
@@ -82,10 +114,15 @@ Quiz module rules:
   - "explanation": 1-2 sentences about why it is correct.
 
 📚 Content quality:
-- Aim for a rich answer (at least ~1000 words total).
+- Aim for a rich section (at least ~350 words total).
 - Avoid filler like "practice a lot" or "keep going" without specifics.
 - Make sure all sentences are complete and not cut off.
 - Avoid repeating the same text across modules; vary wording and go deeper.
+
+🔁 Continuation rule:
+- If previous modules are provided, this section MUST continue from where they ended.
+- Do not repeat the same topics from prior modules.
+- Move one clear step forward in difficulty and specificity.
 
 🔗 Module content rule:
 - Do NOT include external links inside modules. Keep everything self-contained.

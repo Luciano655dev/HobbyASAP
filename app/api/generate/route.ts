@@ -1,7 +1,7 @@
 // app/api/generate/route.ts
 import { NextResponse } from "next/server"
 import { getRedis } from "@/app/lib/redis"
-import { HobbyPlan } from "./types"
+import { HobbyPlan, Module } from "./types"
 import Groq from "groq-sdk"
 import getUserPrompt from "./userPrompt"
 import getSystemPrompt from "../getSystemPrompt"
@@ -16,14 +16,18 @@ const groq = new Groq({
 
 export async function POST(req: Request) {
   try {
-    const { hobby, level, language } = await req.json()
+    const { hobby, level, language, existingModules } = await req.json()
 
     if (!hobby || typeof hobby !== "string") {
       return NextResponse.json({ error: "Hobby is required" }, { status: 400 })
     }
 
     // === GLOBAL TOKEN LIMIT CHECK ===
-    const budget: any = await checkGlobalTokenBudget()
+    const budget = (await checkGlobalTokenBudget()) as {
+      allowed: boolean
+      redis: unknown
+      key: string
+    }
     if (!budget.allowed) {
       return NextResponse.json(
         {
@@ -37,10 +41,23 @@ export async function POST(req: Request) {
     const userLevel =
       typeof level === "string" && level.trim() ? level : "complete beginner"
 
+    const safeExistingModules = Array.isArray(existingModules)
+      ? (existingModules as Module[]).filter(
+          (module) =>
+            module &&
+            typeof module.id === "string" &&
+            typeof module.title === "string" &&
+            typeof module.summary === "string" &&
+            (module.type === "read" || module.type === "quiz")
+        )
+      : []
+
     const lang = language === "pt" ? "pt" : "en"
     const systemPrompt = getSystemPrompt(lang)
 
-    const userPrompt = getUserPrompt(hobby, userLevel)
+    const userPrompt = getUserPrompt(hobby, userLevel, {
+      existingModules: safeExistingModules,
+    })
 
     const completion = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
@@ -53,7 +70,7 @@ export async function POST(req: Request) {
     })
 
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
-    const usage = (completion as any).usage
+    const usage = (completion as { usage?: { total_tokens?: number } }).usage
     const usedTokens: number = usage?.total_tokens ?? 0
     await addGlobalTokens(budget.redis, budget.key, usedTokens)
 
@@ -97,6 +114,14 @@ export async function POST(req: Request) {
         },
         { status: 500 }
       )
+    }
+
+    if (safeExistingModules.length > 0) {
+      const offset = safeExistingModules.length
+      plan.modules = plan.modules.map((module, index) => ({
+        ...module,
+        id: `module-${offset + index + 1}`,
+      }))
     }
 
     // keep your simple metrics

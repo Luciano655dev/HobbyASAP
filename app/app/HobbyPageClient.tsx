@@ -28,9 +28,12 @@ export default function HobbyPageClient() {
   const [streak, setStreak] = useState<StreakState>(INITIAL_STREAK)
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [lessonLoading, setLessonLoading] = useState(false)
+  const [sectionLoading, setSectionLoading] = useState(false)
   const [questions, setQuestions] = useState<QAItem[]>([])
   const [chatThreads, setChatThreads] = useState<SavedSession["chatThreads"]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
+  const [sectionsGenerated, setSectionsGenerated] = useState(1)
+  const [sectionModuleCounts, setSectionModuleCounts] = useState<number[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null)
 
@@ -95,6 +98,12 @@ export default function HobbyPageClient() {
       setQuestions(session.questions)
       setChatThreads(session.chatThreads ?? [])
       setActiveChatId(session.activeChatId ?? null)
+      setSectionsGenerated(session.sectionsGenerated ?? 1)
+      setSectionModuleCounts(
+        session.sectionModuleCounts && session.sectionModuleCounts.length > 0
+          ? session.sectionModuleCounts
+          : [session.plan.modules.length]
+      )
       setStreak(session.streak)
       setSessionId(session.id)
       setSessionCreatedAt(session.createdAt)
@@ -130,6 +139,8 @@ export default function HobbyPageClient() {
       level: sessionLevel,
       icon: plan.icon || null,
       plan,
+      sectionsGenerated,
+      sectionModuleCounts,
       completedTaskIds,
       streak,
       lessons,
@@ -145,6 +156,8 @@ export default function HobbyPageClient() {
     completedTaskIds,
     streak,
     lessons,
+    sectionsGenerated,
+    sectionModuleCounts,
     chatThreads,
     activeChatId,
     questions,
@@ -214,6 +227,8 @@ export default function HobbyPageClient() {
           level: sessionLevel,
           icon: plan.icon || null,
           plan,
+          sectionsGenerated,
+          sectionModuleCounts,
           completedTaskIds,
           streak,
           lessons: nextLessons,
@@ -235,6 +250,64 @@ export default function HobbyPageClient() {
     }
   }
 
+  async function generateNextSection() {
+    if (!plan || !sessionId) return
+    setSectionLoading(true)
+    setError("")
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+    try {
+      const language = localStorage.getItem("hobbyasap_lang") ?? "en"
+      const controller = new AbortController()
+      timeoutId = setTimeout(() => controller.abort(), 30000)
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hobby: plan.hobby,
+          level: plan.level,
+          language,
+          existingModules: plan.modules,
+        }),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to generate next section.")
+      }
+
+      const data = await res.json()
+      const nextPlan = data.plan as HobbyPlan
+      const addedModules = Array.isArray(nextPlan.modules) ? nextPlan.modules : []
+      if (addedModules.length === 0) {
+        throw new Error("AI did not return modules for the next section.")
+      }
+
+      const mergedPlan: HobbyPlan = {
+        ...plan,
+        modules: [...plan.modules, ...addedModules],
+      }
+      setPlan(mergedPlan)
+      setSectionsGenerated((prev) => prev + 1)
+      setSectionModuleCounts((prev) => [...prev, addedModules.length])
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error && err.name === "AbortError"
+          ? "Section generation timed out. Please try again."
+          : err instanceof Error
+          ? err.message
+          : "Something went wrong generating the next section."
+      )
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+      setSectionLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-app-bg text-text flex justify-center px-4 py-8 sm:py-10">
       <div className="w-full max-w-5xl">
@@ -253,6 +326,7 @@ export default function HobbyPageClient() {
                 themeTo={themeTo}
                 progress={progress}
                 dailySessionCompleted={dailySessionCompleted}
+                sectionsGenerated={sectionsGenerated}
               />
             </section>
 
@@ -260,9 +334,12 @@ export default function HobbyPageClient() {
               key={`${sessionId ?? "no-session"}:${searchParams.get("moduleId") ?? "no-module"}`}
               plan={plan}
               completedTaskIds={completedTaskIds}
+              sectionModuleCounts={sectionModuleCounts}
               onToggleTask={toggleTask}
               onOpenLesson={openLesson}
               lessonLoading={lessonLoading}
+              sectionLoading={sectionLoading}
+              onGenerateNextSection={generateNextSection}
               initialOpenModuleId={searchParams.get("moduleId")}
             />
           </>

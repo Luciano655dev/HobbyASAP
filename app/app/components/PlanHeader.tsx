@@ -10,6 +10,7 @@ interface PlanHeaderProps {
   themeTo: string
   progress: number
   dailySessionCompleted: boolean
+  sectionsGenerated: number
 }
 
 const cardVariants: Variants = {
@@ -28,6 +29,7 @@ export default function PlanHeader({
   themeTo,
   progress,
   dailySessionCompleted,
+  sectionsGenerated,
 }: PlanHeaderProps) {
   const icon = plan.icon
 
@@ -62,6 +64,9 @@ export default function PlanHeader({
             <span className="rounded-full border border-border bg-surface px-2 py-1 text-muted">
               {plan.modules.length} modules
             </span>
+            <span className="rounded-full border border-border bg-surface px-2 py-1 text-muted">
+              Section {sectionsGenerated}
+            </span>
             {dailySessionCompleted ? (
               <span className="rounded-full border border-accent/40 bg-accent-soft px-2 py-1 text-accent">
                 Advanced today
@@ -85,6 +90,7 @@ export default function PlanHeader({
           />
         </div>
       </div>
+
     </motion.div>
   )
 }

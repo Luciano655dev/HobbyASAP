@@ -15,6 +15,7 @@ import {
 interface ModulesPathProps {
   plan: HobbyPlan
   completedTaskIds: string[]
+  sectionModuleCounts: number[]
   onToggleTask: (id: string) => void
   onOpenLesson: (
     kind: "inDepth",
@@ -22,6 +23,8 @@ interface ModulesPathProps {
     moduleContext?: ModuleInDepthContext
   ) => void
   lessonLoading: boolean
+  sectionLoading?: boolean
+  onGenerateNextSection?: () => void
   initialOpenModuleId?: string | null
 }
 
@@ -43,9 +46,12 @@ const cardVariants: Variants = {
 export default function ModulesPath({
   plan,
   completedTaskIds,
+  sectionModuleCounts,
   onToggleTask,
   onOpenLesson,
   lessonLoading,
+  sectionLoading = false,
+  onGenerateNextSection,
   initialOpenModuleId,
 }: ModulesPathProps) {
   const modules = plan.modules
@@ -78,6 +84,27 @@ export default function ModulesPath({
   function isUnlocked(index: number) {
     return index <= maxUnlockedIndex
   }
+
+  const normalizedSectionCounts = useMemo(() => {
+    const positiveCounts = sectionModuleCounts.filter((count) => count > 0)
+    const totalFromSections = positiveCounts.reduce((sum, count) => sum + count, 0)
+    if (positiveCounts.length === 0) return [modules.length]
+    if (totalFromSections === modules.length) return positiveCounts
+    if (totalFromSections < modules.length) {
+      return [...positiveCounts, modules.length - totalFromSections]
+    }
+    return [modules.length]
+  }, [sectionModuleCounts, modules.length])
+
+  const sectionStartIndexes = useMemo(() => {
+    const starts: number[] = []
+    let cursor = 0
+    for (const count of normalizedSectionCounts) {
+      starts.push(cursor)
+      cursor += count
+    }
+    return starts
+  }, [normalizedSectionCounts])
 
   function completeModule(id: string) {
     if (!completedTaskIds.includes(id)) {
@@ -160,6 +187,11 @@ export default function ModulesPath({
           (_, index) => getQuizState(openModule.id).selected[index] !== undefined
         )
       : false
+  const completedModulesCount = modules.filter((module) =>
+    completedTaskIds.includes(module.id)
+  ).length
+  const canGenerateNextSection =
+    modules.length > 0 && completedModulesCount === modules.length
 
   return (
     <section className="mb-10">
@@ -188,9 +220,40 @@ export default function ModulesPath({
             const nodeOffsetPattern = [-132, -48, 42, 134, 58, -18]
             const nodeOffset = nodeOffsetPattern[index % nodeOffsetPattern.length]
             const labelOnRight = nodeOffset <= 20
+            const isSectionStart = sectionStartIndexes.includes(index)
+            const sectionIndex = sectionStartIndexes.indexOf(index)
+            const sectionNumber = sectionIndex + 1
+            const sectionModuleCount =
+              sectionIndex >= 0 ? normalizedSectionCounts[sectionIndex] : 0
+            const sectionEndIndex =
+              sectionIndex >= 0
+                ? sectionStartIndexes[sectionIndex] + sectionModuleCount - 1
+                : index
+            const sectionCompletedCount =
+              sectionIndex >= 0
+                ? modules
+                    .slice(index, sectionEndIndex + 1)
+                    .filter((item) => completedTaskIds.includes(item.id)).length
+                : 0
 
             return (
               <div key={module.id}>
+                {isSectionStart && (
+                  <div className="mb-4 mt-7 first:mt-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-border/80" />
+                      <div className="rounded-2xl border border-accent/35 bg-surface px-3 py-2 shadow-sm">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
+                          Section {sectionNumber}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-muted">
+                          {sectionCompletedCount}/{sectionModuleCount} complete
+                        </p>
+                      </div>
+                      <div className="h-px flex-1 bg-border/80" />
+                    </div>
+                  </div>
+                )}
                 <div className="relative sm:hidden">
                   <div className="grid min-h-[108px] grid-cols-[2.75rem,1fr] items-center gap-3">
                   <div className="relative z-20 flex justify-center">
@@ -387,9 +450,36 @@ export default function ModulesPath({
                     )}
                   </div>
                 </div>
+
               </div>
             )
           })}
+
+          {onGenerateNextSection && (
+            <div className="mt-6 flex justify-center border-t border-border/70 pt-4">
+              <button
+                type="button"
+                onClick={onGenerateNextSection}
+                disabled={sectionLoading || !canGenerateNextSection}
+                className="inline-flex items-center justify-center rounded-xl bg-accent-strong px-4 py-2 text-xs font-semibold text-white hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+                title={
+                  canGenerateNextSection
+                    ? "Generate next section"
+                    : `Complete all modules first (${completedModulesCount}/${modules.length})`
+                }
+              >
+                {sectionLoading
+                  ? "Generating next section..."
+                  : "Generate next section"}
+              </button>
+            </div>
+          )}
+          {onGenerateNextSection && !canGenerateNextSection && (
+            <p className="mt-2 text-center text-[11px] text-muted">
+              Complete all modules to unlock the next section ({completedModulesCount}/
+              {modules.length}).
+            </p>
+          )}
         </div>
       </div>
 

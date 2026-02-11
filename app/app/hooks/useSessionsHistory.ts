@@ -38,6 +38,8 @@ export interface SavedSession {
   level: string
   icon: string | null
   plan: HobbyPlan
+  sectionsGenerated?: number
+  sectionModuleCounts?: number[]
   completedTaskIds: string[]
   streak: StreakState
   lessons: Lesson[]
@@ -105,6 +107,20 @@ function normalizeSession(raw: SavedSession): SavedSession {
 
   return {
     ...raw,
+    sectionsGenerated:
+      typeof raw.sectionsGenerated === "number" && raw.sectionsGenerated > 0
+        ? raw.sectionsGenerated
+        : 1,
+    sectionModuleCounts:
+      Array.isArray(raw.sectionModuleCounts) &&
+      raw.sectionModuleCounts.length > 0 &&
+      raw.sectionModuleCounts.every(
+        (count) => Number.isInteger(count) && count > 0
+      )
+        ? raw.sectionModuleCounts
+        : [Array.isArray(raw.plan?.modules) ? raw.plan.modules.length : 0].filter(
+            (count) => count > 0
+          ),
     chatThreads,
     activeChatId,
     questions: activeChatQuestions,
