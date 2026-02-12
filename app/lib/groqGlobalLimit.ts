@@ -55,7 +55,7 @@ export async function checkGlobalTokenBudget(): Promise<GlobalTokenBudget> {
 }
 
 export async function addGlobalTokens(
-  redis: ReturnType<typeof getRedis> | null,
+  redis: ReturnType<typeof getRedis> | null | undefined,
   key: string,
   used: number
 ) {

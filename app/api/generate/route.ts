@@ -8,6 +8,7 @@ import getSystemPrompt from "../getSystemPrompt"
 import {
   checkGlobalTokenBudget,
   addGlobalTokens,
+  type GlobalTokenBudget,
 } from "@/app/lib/groqGlobalLimit"
 
 const groq = new Groq({
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
     }
 
     // === GLOBAL TOKEN LIMIT CHECK ===
-    const budget = await checkGlobalTokenBudget()
+    const budget: GlobalTokenBudget = await checkGlobalTokenBudget()
     if (!budget.allowed) {
       return NextResponse.json(
         {
@@ -68,7 +69,9 @@ export async function POST(req: Request) {
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
     const usage = (completion as { usage?: { total_tokens?: number } }).usage
     const usedTokens: number = usage?.total_tokens ?? 0
-    await addGlobalTokens(budget.redis, budget.key, usedTokens)
+    if (budget.allowed) {
+      await addGlobalTokens(budget.redis, budget.key, usedTokens)
+    }
 
     let raw = completion.choices?.[0]?.message?.content || ""
     raw = raw.trim()
