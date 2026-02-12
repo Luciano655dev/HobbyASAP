@@ -25,11 +25,11 @@ export default function Navbar() {
               H
             </div>
             <div>
-              <p className="text-sm font-semibold tracking-tight text-text">
+              <p className="text-[15px] font-bold leading-none tracking-[-0.01em] text-text">
                 HobbyASAP
               </p>
-              <p className="text-[10px] leading-tight text-muted">
-                Hobbies as daily quests
+              <p className="mt-0.5 text-[10px] leading-tight text-muted">
+                Daily learning quests
               </p>
             </div>
           </Link>

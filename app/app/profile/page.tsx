@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { motion, type Variants } from "framer-motion"
 import { useSessionsHistory } from "../hooks/useSessionsHistory"
 import { useGlobalXpStats } from "../hooks/useXpStats"
 import { LS_CURRENT_SESSION_KEY, SESSIONS_UPDATED_EVENT } from "../constants"
@@ -16,6 +17,34 @@ function getSessionChatCount(session: {
     )
   }
   return session.questions.length
+}
+
+const sectionVariants: Variants = {
+  hidden: { opacity: 0, y: 10, scale: 0.99 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.22, ease: "easeOut" },
+  },
+}
+
+const gridVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+}
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
 }
 
 export default function ProfilePage() {
@@ -158,7 +187,12 @@ export default function ProfilePage() {
       <h1 className="text-2xl font-bold text-text">Profile</h1>
       <p className="mt-1 text-sm text-muted">Overall progress and activity.</p>
 
-      <div className="mt-6 rounded-2xl border border-border bg-surface p-4 sm:p-5">
+      <motion.div
+        className="mt-6 rounded-2xl border border-border bg-surface p-4 sm:p-5"
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           Level
         </p>
@@ -177,9 +211,14 @@ export default function ProfilePage() {
             style={{ width: `${xpStats.levelProgressPercent}%` }}
           />
         </div>
-      </div>
+      </motion.div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <motion.div
+        className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        variants={gridVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <StatCard
           label="Current streak"
           value={`${currentSession?.streak.current ?? 0} days`}
@@ -220,9 +259,15 @@ export default function ProfilePage() {
           value={`${aggregateStats.totalAiChats}`}
           note="Questions asked to AI"
         />
-      </div>
+      </motion.div>
 
-      <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
+      <motion.div
+        className="mt-4 rounded-2xl border border-border bg-surface p-4"
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.25 }}
+      >
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           Current course snapshot
         </p>
@@ -250,9 +295,15 @@ export default function ProfilePage() {
             </p>
           </div>
         )}
-      </div>
+      </motion.div>
 
-      <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
+      <motion.div
+        className="mt-4 rounded-2xl border border-border bg-surface p-4"
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.25 }}
+      >
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           Learning footprint
         </p>
@@ -265,9 +316,15 @@ export default function ProfilePage() {
             Average of {aggregateStats.avgCompletionPerCourse} modules completed per course.
           </p>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
+      <motion.div
+        className="mt-4 rounded-2xl border border-border bg-surface p-4"
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.25 }}
+      >
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           Most focused course
         </p>
@@ -289,7 +346,7 @@ export default function ProfilePage() {
             </p>
           </div>
         )}
-      </div>
+      </motion.div>
     </section>
   )
 }
@@ -304,12 +361,15 @@ function StatCard({
   note: string
 }) {
   return (
-    <article className="rounded-2xl border border-border bg-surface p-4">
+    <motion.article
+      className="rounded-2xl border border-border bg-surface p-4"
+      variants={cardVariants}
+    >
       <p className="text-xs font-semibold uppercase tracking-wide text-muted">
         {label}
       </p>
       <p className="mt-1 text-xl font-bold text-text">{value}</p>
       <p className="mt-1 text-xs text-muted">{note}</p>
-    </article>
+    </motion.article>
   )
 }

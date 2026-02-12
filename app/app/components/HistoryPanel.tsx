@@ -1,9 +1,11 @@
 // app/components/HistoryPanel.tsx
 "use client"
 
+import { useState } from "react"
 import { motion } from "framer-motion"
 import { Calendar, Flame, Play, Trash2 } from "lucide-react"
 import { SavedSession } from "../hooks/useSessionsHistory"
+import ConfirmModal from "./ConfirmModal"
 
 interface HistoryPanelProps {
   history: SavedSession[]
@@ -18,6 +20,27 @@ export default function HistoryPanel({
   onDelete,
   onLoad,
 }: HistoryPanelProps) {
+  const [confirmState, setConfirmState] = useState<
+    | { type: "clear-all" }
+    | { type: "delete-course"; sessionId: string; hobby: string }
+    | null
+  >(null)
+
+  function closeConfirm() {
+    setConfirmState(null)
+  }
+
+  function handleConfirmAction() {
+    if (!confirmState) return
+    if (confirmState.type === "clear-all") {
+      onClearAll()
+      closeConfirm()
+      return
+    }
+    onDelete(confirmState.sessionId)
+    closeConfirm()
+  }
+
   return (
     <motion.div
       className="bg-surface/90 border border-border rounded-2xl p-5 sm:p-6 shadow-sm"
@@ -30,7 +53,7 @@ export default function HistoryPanel({
         {history.length > 0 && (
           <button
             type="button"
-            onClick={onClearAll}
+            onClick={() => setConfirmState({ type: "clear-all" })}
             className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-2 px-2.5 py-1 text-[11px] text-muted hover:text-danger"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -68,7 +91,11 @@ export default function HistoryPanel({
                     className="rounded-md p-1 text-muted hover:bg-danger/10 hover:text-danger"
                     onClick={(e) => {
                       e.stopPropagation()
-                      onDelete(session.id)
+                      setConfirmState({
+                        type: "delete-course",
+                        sessionId: session.id,
+                        hobby: session.hobby,
+                      })
                     }}
                     aria-label={`Delete ${session.hobby}`}
                   >
@@ -79,7 +106,7 @@ export default function HistoryPanel({
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <div className="rounded-xl border border-border bg-surface-2 px-2 py-1.5 text-[11px] text-muted">
                     <p className="inline-flex items-center gap-1">
-                      <Flame className="h-3.5 w-3.5 text-warning" />
+                      <Flame className="h-3.5 w-3.5 text-muted" />
                       Streak
                     </p>
                     <p className="mt-0.5 text-sm font-semibold text-text">
@@ -121,6 +148,20 @@ export default function HistoryPanel({
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!confirmState}
+        title="Confirm delete"
+        message={
+          confirmState?.type === "clear-all"
+            ? "Are you sure you want to delete all saved courses?"
+            : `Are you sure you want to delete the course \"${confirmState?.hobby}\"?`
+        }
+        confirmLabel="Delete"
+        danger
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirm}
+      />
     </motion.div>
   )
 }

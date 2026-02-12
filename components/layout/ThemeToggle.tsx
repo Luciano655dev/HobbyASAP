@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Moon, Sun } from "lucide-react"
 
 const STORAGE_KEY = "hobbyasap_theme"
 
@@ -12,23 +13,20 @@ function applyTheme(next: Theme) {
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("light")
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "light"
+    const saved = localStorage.getItem(STORAGE_KEY)
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+    return saved === "light" || saved === "dark"
+      ? saved
+      : prefersDark
+      ? "dark"
+      : "light"
+  })
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-    const saved = localStorage.getItem(STORAGE_KEY)
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches
-    const next: Theme =
-      saved === "light" || saved === "dark"
-        ? saved
-        : prefersDark
-        ? "dark"
-        : "light"
-    setTheme(next)
-    applyTheme(next)
-  }, [])
+    applyTheme(theme)
+  }, [theme])
 
   function toggleTheme() {
     const next: Theme = theme === "dark" ? "light" : "dark"
@@ -43,11 +41,15 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label="Toggle color theme"
-      className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-[11px] font-semibold text-text shadow-sm transition hover:border-accent/50 hover:bg-surface-2"
+      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text shadow-sm transition hover:border-accent/50 hover:bg-surface-2"
     >
-      <span className="text-base">{theme === "dark" ? "🌙" : "☀️"}</span>
-      <span>{theme === "dark" ? "Dark" : "Light"}</span>
+      {theme === "dark" ? (
+        <Sun className="h-4 w-4" />
+      ) : (
+        <Moon className="h-4 w-4" />
+      )}
     </button>
   )
 }

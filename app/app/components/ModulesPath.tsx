@@ -678,12 +678,12 @@ export default function ModulesPath({
                       }}
                       aria-label="Go to next module"
                       title="Go to next module"
-                        className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl text-2xl font-bold ${
+                      className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl text-2xl font-bold ${
                         nextModuleUnlocked
-                          ? "bg-accent-strong text-white hover:bg-accent"
+                          ? "border border-accent/60 bg-surface text-accent hover:bg-accent-soft"
                           : "border border-border bg-surface-2 text-muted cursor-not-allowed"
                       }`}
-                      >
+                    >
                         <ArrowRight className="h-7 w-7" />
                       </button>
                   ) : (

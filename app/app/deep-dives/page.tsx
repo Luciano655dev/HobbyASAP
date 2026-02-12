@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { motion, type Variants } from "framer-motion"
 import { Trash2, X } from "lucide-react"
 import { useSessionsHistory } from "../hooks/useSessionsHistory"
 import { LS_CURRENT_SESSION_KEY, SESSIONS_UPDATED_EVENT } from "../constants"
 import type { Lesson } from "../types"
+import ConfirmModal from "../components/ConfirmModal"
 
 type DeepDiveItem = {
   sessionId: string
@@ -16,12 +18,41 @@ type DeepDiveItem = {
   moduleTitle: string
 }
 
+const listVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+}
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
+}
+
+const modalVariants: Variants = {
+  hidden: { opacity: 0, y: 14, scale: 0.985 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
+}
+
 export default function DeepDivesPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { history, saveSnapshot } = useSessionsHistory()
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [dismissedAutoOpen, setDismissedAutoOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<DeepDiveItem | null>(null)
 
   const deepDives = useMemo<DeepDiveItem[]>(() => {
     return history.flatMap((session) => {
@@ -86,6 +117,10 @@ export default function DeepDivesPage() {
     }
   }
 
+  function requestRemoveDeepDive(item: DeepDiveItem) {
+    setPendingDelete(item)
+  }
+
   function goToModule(item: DeepDiveItem) {
     if (typeof window !== "undefined") {
       localStorage.setItem(LS_CURRENT_SESSION_KEY, item.sessionId)
@@ -110,9 +145,14 @@ export default function DeepDivesPage() {
           No deep dives yet. Generate them from the Learn page.
         </p>
       ) : (
-        <div className="mt-6 space-y-3">
+        <motion.div
+          className="mt-6 space-y-3"
+          variants={listVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {deepDives.map((item) => (
-            <div
+            <motion.div
               key={`${item.sessionId}:${item.lessonIndex}`}
               role="button"
               tabIndex={0}
@@ -124,6 +164,7 @@ export default function DeepDivesPage() {
                 }
               }}
               className="w-full cursor-pointer rounded-2xl border border-border bg-surface p-4 text-left shadow-sm transition hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/40"
+              variants={itemVariants}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -150,9 +191,9 @@ export default function DeepDivesPage() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
-                      removeDeepDive(item)
+                      requestRemoveDeepDive(item)
                     }}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-danger/40 bg-surface-2 text-danger hover:bg-danger/10"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted hover:bg-danger/10 hover:text-danger"
                     aria-label="Delete deep dive"
                     title="Delete deep dive"
                   >
@@ -160,14 +201,19 @@ export default function DeepDivesPage() {
                   </button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {openItem && (
         <div className="fixed inset-0 z-50 bg-app-bg/90 px-4 py-6 backdrop-blur-sm sm:px-10">
-          <div className="mx-auto flex h-[88vh] max-w-3xl flex-col rounded-3xl border border-border bg-surface p-5 sm:p-6">
+          <motion.div
+            className="mx-auto flex h-[88vh] max-w-3xl flex-col rounded-3xl border border-border bg-surface p-5 sm:p-6"
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+          >
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted">Deep dive</p>
@@ -228,7 +274,7 @@ export default function DeepDivesPage() {
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
               <button
                 type="button"
-                onClick={() => removeDeepDive(openItem)}
+                onClick={() => requestRemoveDeepDive(openItem)}
                 className="rounded-xl border border-danger/50 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10"
               >
                 Delete deep dive
@@ -241,9 +287,28 @@ export default function DeepDivesPage() {
                 Go to module
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!pendingDelete}
+        title="Delete deep dive?"
+        message={
+          pendingDelete
+            ? `Are you sure you want to delete \"${pendingDelete.lesson.title}\"?`
+            : ""
+        }
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => {
+          if (pendingDelete) {
+            removeDeepDive(pendingDelete)
+          }
+          setPendingDelete(null)
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </section>
   )
 }

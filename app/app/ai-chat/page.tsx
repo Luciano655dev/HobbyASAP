@@ -2,16 +2,20 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Bot, MessageSquare, Plus, Trash2 } from "lucide-react"
+import { Bot, Plus, Trash2 } from "lucide-react"
 import AskQuestionPanel, { type QAItem } from "../AskQuestionPanel"
 import { type Lesson } from "../types"
 import { useSessionsHistory } from "../hooks/useSessionsHistory"
 import { LS_CURRENT_SESSION_KEY } from "../constants"
+import ConfirmModal from "../components/ConfirmModal"
 
 export default function AiChatPage() {
   const router = useRouter()
   const { history, saveSnapshot } = useSessionsHistory()
   const [lessonLoading, setLessonLoading] = useState(false)
+  const [pendingDeleteChatId, setPendingDeleteChatId] = useState<string | null>(
+    null
+  )
 
   const currentSession = useMemo(() => {
     if (typeof window === "undefined") return null
@@ -113,6 +117,7 @@ export default function AiChatPage() {
 
   function handleDeleteChat(chatId: string) {
     if (!currentSession) return
+
     const remaining = chatThreads.filter((thread) => thread.id !== chatId)
     if (remaining.length === 0) {
       const now = new Date().toISOString()
@@ -130,6 +135,10 @@ export default function AiChatPage() {
     const nextActiveId = activeChatId === chatId ? remaining[0].id : activeChatId
     saveSessionChats(remaining, nextActiveId)
   }
+
+  const pendingDeleteThread = pendingDeleteChatId
+    ? chatThreads.find((thread) => thread.id === pendingDeleteChatId) ?? null
+    : null
 
   async function openInDepth(topic: string) {
     if (!currentSession) return
@@ -200,25 +209,31 @@ export default function AiChatPage() {
         <p className="text-sm text-muted">Select a course in Courses.</p>
       ) : (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border bg-linear-to-r from-surface to-surface-2 p-4 shadow-sm sm:p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h1 className="text-lg font-semibold tracking-tight text-text">
-                  AI Chat
-                </h1>
-                <p className="mt-1 text-xs text-muted sm:text-sm">
-                  Ask focused questions and choose exactly which context to include.
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[11px] text-muted">
-                <Bot className="h-3.5 w-3.5" />
-                <span>{currentSession.hobby}</span>
-              </div>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-text">AI Chat</h1>
+            <p className="mt-1 text-sm text-muted">
+              Ask focused questions and choose exactly which context to include.
+            </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-[17rem_1fr]">
-          <aside className="rounded-2xl border border-border bg-surface/90 p-3 shadow-sm md:sticky md:top-4 md:h-[calc(100vh-11rem)] md:overflow-hidden">
+          <div className="grid gap-4 md:grid-cols-[1fr_17rem] md:h-[calc(100vh-11rem)]">
+          <div className="min-w-0 md:h-full">
+            <AskQuestionPanel
+              plan={currentSession.plan}
+              lessons={currentSession.lessons}
+              questions={activeChat?.questions ?? []}
+              onQuestionAdded={handleQuestionAdded}
+              onQuestionDeleted={handleQuestionDeleted}
+              onInDepthRequest={openInDepth}
+              lessonLoading={lessonLoading}
+            />
+          </div>
+
+          <aside className="rounded-2xl border border-border bg-surface/90 p-3 shadow-sm md:h-full md:overflow-hidden">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[11px] text-muted">
+              <Bot className="h-3.5 w-3.5" />
+              <span>{currentSession.hobby}</span>
+            </div>
             <button
               type="button"
               onClick={handleNewChat}
@@ -228,7 +243,7 @@ export default function AiChatPage() {
               New chat
             </button>
 
-            <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1 md:max-h-[calc(100%-3.25rem)]">
+            <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1 md:max-h-[calc(100%-4.75rem)]">
               {orderedThreads.map((thread) => {
                 const isActive = thread.id === activeChatId
                 return (
@@ -255,7 +270,7 @@ export default function AiChatPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDeleteChat(thread.id)}
+                      onClick={() => setPendingDeleteChatId(thread.id)}
                       className="rounded-md p-1 text-muted hover:bg-danger/10 hover:text-danger"
                       aria-label="Delete chat"
                       title="Delete chat"
@@ -267,27 +282,28 @@ export default function AiChatPage() {
               })}
             </div>
           </aside>
-
-          <div>
-            <div className="mb-2 inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[11px] text-muted">
-              <MessageSquare className="h-3.5 w-3.5" />
-              <span className="truncate">
-                {activeChat?.title ?? "New chat"}
-              </span>
-            </div>
-            <AskQuestionPanel
-              plan={currentSession.plan}
-              lessons={currentSession.lessons}
-              questions={activeChat?.questions ?? []}
-              onQuestionAdded={handleQuestionAdded}
-              onQuestionDeleted={handleQuestionDeleted}
-              onInDepthRequest={openInDepth}
-              lessonLoading={lessonLoading}
-            />
-          </div>
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!pendingDeleteChatId}
+        title="Delete chat?"
+        message={
+          pendingDeleteThread
+            ? `Are you sure you want to delete \"${pendingDeleteThread.title}\"?`
+            : "Are you sure you want to delete this chat?"
+        }
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => {
+          if (pendingDeleteChatId) {
+            handleDeleteChat(pendingDeleteChatId)
+          }
+          setPendingDeleteChatId(null)
+        }}
+        onCancel={() => setPendingDeleteChatId(null)}
+      />
     </section>
   )
 }

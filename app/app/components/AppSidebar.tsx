@@ -133,8 +133,12 @@ export default function AppSidebar() {
               H
             </div>
             <div>
-              <p className="text-sm font-semibold tracking-tight text-text">HobbyASAP</p>
-              <p className="text-[11px] text-muted">Daily learning quests</p>
+              <p className="text-[15px] font-bold leading-none tracking-[-0.01em] text-text">
+                HobbyASAP
+              </p>
+              <p className="mt-0.5 text-[10px] leading-tight text-muted">
+                Daily learning quests
+              </p>
             </div>
           </Link>
         </div>
