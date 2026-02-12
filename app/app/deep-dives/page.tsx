@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { motion, type Variants } from "framer-motion"
 import { Trash2, X } from "lucide-react"
 import { useSessionsHistory } from "../hooks/useSessionsHistory"
@@ -52,7 +52,6 @@ const modalVariants: Variants = {
 
 export default function DeepDivesPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { history, saveSnapshot } = useSessionsHistory()
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [dismissedAutoOpen, setDismissedAutoOpen] = useState(false)
@@ -60,6 +59,10 @@ export default function DeepDivesPage() {
   const [currentSessionId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null
     return localStorage.getItem(LS_CURRENT_SESSION_KEY)
+  })
+  const [shouldOpenLatestFromUrl] = useState(() => {
+    if (typeof window === "undefined") return false
+    return new URLSearchParams(window.location.search).get("openLatest") === "1"
   })
 
   const deepDives = useMemo<DeepDiveItem[]>(() => {
@@ -89,7 +92,7 @@ export default function DeepDivesPage() {
   }, [history])
 
   const shouldAutoOpenLatest =
-    !dismissedAutoOpen && searchParams.get("openLatest") === "1"
+    !dismissedAutoOpen && shouldOpenLatestFromUrl
   const resolvedOpenKey =
     openKey !== null
       ? openKey
