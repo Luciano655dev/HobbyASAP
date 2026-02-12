@@ -32,6 +32,7 @@ function isActivePath(pathname: string | null, href: string) {
 export default function AppSidebar() {
   const pathname = usePathname()
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [hasCourses, setHasCourses] = useState(false)
   const [currentSession, setCurrentSession] = useState<null | {
     hobby: string
     icon: string | null
@@ -45,10 +46,12 @@ export default function AppSidebar() {
         const raw = localStorage.getItem(LS_SESSIONS_KEY)
         const sessions: unknown = raw ? JSON.parse(raw) : []
         if (!Array.isArray(sessions) || sessions.length === 0) {
+          setHasCourses(false)
           setCurrentSessionId(null)
           setCurrentSession(null)
           return
         }
+        setHasCourses(true)
 
         const storedCurrentId = localStorage.getItem(LS_CURRENT_SESSION_KEY)
         const fallbackId = sessions[0]?.id
@@ -89,6 +92,7 @@ export default function AppSidebar() {
           totalModules,
         })
       } catch {
+        setHasCourses(false)
         setCurrentSessionId(null)
         setCurrentSession(null)
       }
@@ -105,7 +109,7 @@ export default function AppSidebar() {
   }, [])
 
   const currentCourseHref = useMemo(() => {
-    if (!currentSessionId) return "/app/courses"
+    if (!currentSessionId) return "/app/courses/new"
     return `/app/learn?sessionId=${encodeURIComponent(currentSessionId)}`
   }, [currentSessionId])
 
@@ -128,7 +132,7 @@ export default function AppSidebar() {
     <>
       <aside className="hidden border-r border-border/80 bg-surface/95 md:sticky md:top-0 md:flex md:h-screen md:w-72 md:flex-col">
         <div className="border-b border-border/80 px-4 py-4">
-          <Link href="/app/learn" className="flex items-center gap-2">
+          <Link href={hasCourses ? "/app/learn" : "/app/courses/new"} className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-sm font-bold text-white">
               H
             </div>
@@ -167,12 +171,12 @@ export default function AppSidebar() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-text">
-                {currentSession?.hobby ?? "Current course"}
+                {currentSession?.hobby ?? "No active course"}
               </p>
               <p className="text-[10px] text-muted">
                 {currentSession
                   ? `${currentSession.completedModules}/${currentSession.totalModules} • ${currentProgress}%`
-                  : "Open your active path"}
+                  : "Create a course to start"}
               </p>
             </div>
             <ChevronRight className="h-4 w-4 text-muted" />
