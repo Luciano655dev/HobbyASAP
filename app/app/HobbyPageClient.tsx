@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { HobbyPlan, Lesson, LessonKind, ModuleInDepthContext } from "./types"
 import type { QAItem } from "./AskQuestionPanel"
 import {
@@ -22,8 +22,15 @@ import {
 
 export default function HobbyPageClient() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { history, saveSnapshot } = useSessionsHistory()
+  const [querySessionId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    return new URLSearchParams(window.location.search).get("sessionId")
+  })
+  const [queryModuleId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    return new URLSearchParams(window.location.search).get("moduleId")
+  })
 
   const [sessionHobby, setSessionHobby] = useState<string>("")
   const [sessionLevel, setSessionLevel] = useState<string>("")
@@ -120,18 +127,17 @@ export default function HobbyPageClient() {
   useEffect(() => {
     if (!history.length) return
 
-    const fromQuery = searchParams.get("sessionId")
     const storedCurrent =
       typeof window !== "undefined"
         ? localStorage.getItem(LS_CURRENT_SESSION_KEY)
         : null
-    const targetSessionId = fromQuery || storedCurrent || history[0]?.id
+    const targetSessionId = querySessionId || storedCurrent || history[0]?.id
     if (!targetSessionId || targetSessionId === sessionId) return
 
     const targetSession = history.find((item) => item.id === targetSessionId)
     if (!targetSession) return
     loadFromHistory(targetSession)
-  }, [history, searchParams, sessionId, loadFromHistory])
+  }, [history, querySessionId, sessionId, loadFromHistory])
 
   useEffect(() => {
     if (!plan || !sessionId) return
@@ -346,7 +352,7 @@ export default function HobbyPageClient() {
             </section>
 
             <ModulesPath
-              key={`${sessionId ?? "no-session"}:${searchParams.get("moduleId") ?? "no-module"}`}
+              key={`${sessionId ?? "no-session"}:${queryModuleId ?? "no-module"}`}
               plan={plan}
               completedTaskIds={completedTaskIds}
               sectionModuleCounts={sectionModuleCounts}
@@ -357,7 +363,7 @@ export default function HobbyPageClient() {
               sectionsGenerated={sectionsGenerated}
               maxSections={MAX_SECTIONS_PER_COURSE}
               onGenerateNextSection={generateNextSection}
-              initialOpenModuleId={searchParams.get("moduleId")}
+              initialOpenModuleId={queryModuleId}
             />
           </>
         ) : (

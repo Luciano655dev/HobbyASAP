@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  --font-app: "Nunito", "Avenir Next", "Avenir", "Segoe UI", "Inter", sans-serif;
   --app-bg: #f7f9fc;
   --surface: #ffffff;
   --surface-2: #f1f4fb;

@@ -5,7 +5,6 @@ import type { HobbyPlan, Lesson } from "../generate/types"
 import {
   checkGlobalTokenBudget,
   addGlobalTokens,
-  type GlobalTokenBudget,
 } from "@/app/lib/groqGlobalLimit"
 
 const groq = new Groq({
@@ -22,6 +21,28 @@ interface ContextSelection {
   moduleIds?: string[]
   deepDiveIndexes?: number[]
   includeHistory?: boolean
+}
+
+type TokenBudgetAllowed = {
+  redis: Parameters<typeof addGlobalTokens>[0]
+  key: string
+}
+
+function readAllowedTokenBudget(value: unknown): TokenBudgetAllowed | null {
+  if (!value || typeof value !== "object") return null
+
+  const candidate = value as {
+    allowed?: unknown
+    redis?: unknown
+    key?: unknown
+  }
+
+  if (candidate.allowed !== true) return null
+
+  const redis = (candidate.redis ?? null) as Parameters<typeof addGlobalTokens>[0]
+  const key = typeof candidate.key === "string" ? candidate.key : ""
+
+  return { redis, key }
 }
 
 export async function POST(req: Request) {
@@ -58,8 +79,8 @@ export async function POST(req: Request) {
     }
 
     // === GLOBAL TOKEN LIMIT CHECK ===
-    const budget: GlobalTokenBudget = await checkGlobalTokenBudget()
-    if (!budget.allowed) {
+    const budget = readAllowedTokenBudget(await checkGlobalTokenBudget())
+    if (!budget) {
       return NextResponse.json(
         {
           error:
@@ -173,9 +194,7 @@ export async function POST(req: Request) {
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
     const usage = (completion as { usage?: { total_tokens?: number } }).usage
     const usedTokens: number = usage?.total_tokens ?? 0
-    if (budget.allowed) {
-      await addGlobalTokens(budget.redis, budget.key, usedTokens)
-    }
+    await addGlobalTokens(budget.redis, budget.key, usedTokens)
 
     let raw = completion.choices?.[0]?.message?.content || ""
     raw = raw.trim()
