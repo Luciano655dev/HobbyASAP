@@ -28,6 +28,9 @@ interface AskQuestionPanelProps {
   onQuestionDeleted: (id: string) => void
   onInDepthRequest?: (topic: string) => void
   lessonLoading?: boolean
+  questionLimitReached?: boolean
+  questionRemaining?: number
+  questionLimit?: number
 }
 
 const panelVariants: Variants = {
@@ -89,6 +92,9 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
     onQuestionDeleted,
     onInDepthRequest,
     lessonLoading = false,
+    questionLimitReached = false,
+    questionRemaining = 0,
+    questionLimit = 0,
   } = props
 
   const [question, setQuestion] = useState("")
@@ -146,6 +152,11 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
 
     if (selectedContextCount === 0) {
       setError("Add at least one context before asking.")
+      return
+    }
+
+    if (questionLimitReached) {
+      setError(`AI question limit reached (${questionLimit}).`)
       return
     }
 
@@ -444,13 +455,18 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
           <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="submit"
-              disabled={!hasContext || loading || selectedContextCount === 0}
+              disabled={
+                !hasContext ||
+                loading ||
+                selectedContextCount === 0 ||
+                questionLimitReached
+              }
               className="inline-flex w-full items-center justify-center rounded-xl bg-accent-strong px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:text-sm"
             >
               {loading ? "Thinking..." : "Send"}
             </button>
             <p className="text-[10px] text-muted sm:text-right">
-              Context is only what you select.
+              Context is only what you select. {questionRemaining} questions left.
             </p>
           </div>
 

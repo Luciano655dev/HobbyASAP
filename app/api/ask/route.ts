@@ -57,11 +57,7 @@ export async function POST(req: Request) {
     }
 
     // === GLOBAL TOKEN LIMIT CHECK ===
-    const budget = (await checkGlobalTokenBudget()) as {
-      allowed: boolean
-      redis: unknown
-      key: string
-    }
+    const budget = await checkGlobalTokenBudget()
     if (!budget.allowed) {
       return NextResponse.json(
         {

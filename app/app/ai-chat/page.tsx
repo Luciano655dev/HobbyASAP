@@ -6,7 +6,12 @@ import { Bot, Plus, Trash2 } from "lucide-react"
 import AskQuestionPanel, { type QAItem } from "../AskQuestionPanel"
 import { type Lesson } from "../types"
 import { useSessionsHistory } from "../hooks/useSessionsHistory"
-import { LS_CURRENT_SESSION_KEY } from "../constants"
+import {
+  LS_CURRENT_SESSION_KEY,
+  MAX_CHAT_THREADS_PER_COURSE,
+  MAX_DEEP_DIVES_PER_COURSE,
+  MAX_QUESTIONS_TOTAL,
+} from "../constants"
 import ConfirmModal from "../components/ConfirmModal"
 
 export default function AiChatPage() {
@@ -16,6 +21,7 @@ export default function AiChatPage() {
   const [pendingDeleteChatId, setPendingDeleteChatId] = useState<string | null>(
     null
   )
+  const [chatLimitError, setChatLimitError] = useState("")
 
   const currentSession = useMemo(() => {
     if (typeof window === "undefined") return null
@@ -56,6 +62,26 @@ export default function AiChatPage() {
     if (!activeChatId) return null
     return chatThreads.find((thread) => thread.id === activeChatId) ?? null
   }, [chatThreads, activeChatId])
+
+  const totalQuestionCount = useMemo(() => {
+    return history.reduce((total, session) => {
+      if (Array.isArray(session.chatThreads) && session.chatThreads.length > 0) {
+        return (
+          total +
+          session.chatThreads.reduce(
+            (sum, thread) => sum + thread.questions.length,
+            0
+          )
+        )
+      }
+      return total + session.questions.length
+    }, 0)
+  }, [history])
+
+  const questionLimitReached = totalQuestionCount >= MAX_QUESTIONS_TOTAL
+  const questionRemaining = Math.max(0, MAX_QUESTIONS_TOTAL - totalQuestionCount)
+  const chatLimitReached = chatThreads.length >= MAX_CHAT_THREADS_PER_COURSE
+  const deepDiveLimitReached = (currentSession?.lessons.length ?? 0) >= MAX_DEEP_DIVES_PER_COURSE
 
   const orderedThreads = useMemo(() => {
     return [...chatThreads].sort((a, b) => {
@@ -100,6 +126,13 @@ export default function AiChatPage() {
 
   function handleNewChat() {
     if (!currentSession) return
+    if (chatLimitReached) {
+      setChatLimitError(
+        `Chat limit reached (${MAX_CHAT_THREADS_PER_COURSE}) for this course.`
+      )
+      return
+    }
+    setChatLimitError("")
     const now = new Date().toISOString()
     const newChat = {
       id: `chat_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -142,6 +175,7 @@ export default function AiChatPage() {
 
   async function openInDepth(topic: string) {
     if (!currentSession) return
+    if (deepDiveLimitReached) return
     setLessonLoading(true)
 
     try {
@@ -173,6 +207,7 @@ export default function AiChatPage() {
 
   function handleQuestionAdded(item: QAItem) {
     if (!activeChat) return
+    if (questionLimitReached) return
     const nextThreads = chatThreads.map((thread) => {
       if (thread.id !== activeChat.id) return thread
       const nextQuestions = [...thread.questions, item]
@@ -226,6 +261,9 @@ export default function AiChatPage() {
               onQuestionDeleted={handleQuestionDeleted}
               onInDepthRequest={openInDepth}
               lessonLoading={lessonLoading}
+              questionLimitReached={questionLimitReached}
+              questionRemaining={questionRemaining}
+              questionLimit={MAX_QUESTIONS_TOTAL}
             />
           </div>
 
@@ -237,11 +275,26 @@ export default function AiChatPage() {
             <button
               type="button"
               onClick={handleNewChat}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent-strong px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent"
+              disabled={chatLimitReached}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent-strong px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Plus className="h-4 w-4" />
               New chat
             </button>
+            <p className="mt-1 text-[10px] text-muted">
+              Chats: {chatThreads.length}/{MAX_CHAT_THREADS_PER_COURSE}
+            </p>
+            <p className="mt-0.5 text-[10px] text-muted">
+              AI questions: {totalQuestionCount}/{MAX_QUESTIONS_TOTAL}
+            </p>
+            <p className="mt-0.5 text-[10px] text-muted">
+              Deep dives: {currentSession.lessons.length}/{MAX_DEEP_DIVES_PER_COURSE}
+            </p>
+            {chatLimitError && (
+              <p className="mt-1 rounded-lg border border-danger/40 bg-danger/10 px-2 py-1 text-[10px] text-danger">
+                {chatLimitError}
+              </p>
+            )}
 
             <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1 md:max-h-[calc(100%-4.75rem)]">
               {orderedThreads.map((thread) => {

@@ -5,7 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { motion, type Variants } from "framer-motion"
 import { Trash2, X } from "lucide-react"
 import { useSessionsHistory } from "../hooks/useSessionsHistory"
-import { LS_CURRENT_SESSION_KEY, SESSIONS_UPDATED_EVENT } from "../constants"
+import {
+  LS_CURRENT_SESSION_KEY,
+  MAX_DEEP_DIVES_PER_COURSE,
+  SESSIONS_UPDATED_EVENT,
+} from "../constants"
 import type { Lesson } from "../types"
 import ConfirmModal from "../components/ConfirmModal"
 
@@ -53,6 +57,10 @@ export default function DeepDivesPage() {
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [dismissedAutoOpen, setDismissedAutoOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<DeepDiveItem | null>(null)
+  const [currentSessionId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    return localStorage.getItem(LS_CURRENT_SESSION_KEY)
+  })
 
   const deepDives = useMemo<DeepDiveItem[]>(() => {
     return history.flatMap((session) => {
@@ -96,6 +104,12 @@ export default function DeepDivesPage() {
           (item) => `${item.sessionId}:${item.lessonIndex}` === resolvedOpenKey
         )
   const openItem = openIndex >= 0 ? deepDives[openIndex] : null
+  const currentSessionDeepDiveCount = useMemo(() => {
+    if (!currentSessionId) return 0
+    const session = history.find((entry) => entry.id === currentSessionId)
+    if (!session) return 0
+    return session.lessons.filter((lesson) => lesson.kind === "inDepth").length
+  }, [history, currentSessionId])
 
   function closeModal() {
     setOpenKey(null)
@@ -139,6 +153,9 @@ export default function DeepDivesPage() {
   return (
     <section className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-bold text-text">Deep Dives</h1>
+      <p className="mt-1 text-xs text-muted">
+        Current course: {currentSessionDeepDiveCount}/{MAX_DEEP_DIVES_PER_COURSE} deep dives
+      </p>
 
       {deepDives.length === 0 ? (
         <p className="mt-6 text-sm text-muted">

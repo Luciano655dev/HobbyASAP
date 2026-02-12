@@ -13,7 +13,12 @@ import {
 } from "./hooks/useSessionsHistory"
 import PlanHeader from "./components/PlanHeader"
 import ModulesPath from "./components/ModulesPath"
-import { LS_CURRENT_SESSION_KEY, SESSIONS_UPDATED_EVENT } from "./constants"
+import {
+  LS_CURRENT_SESSION_KEY,
+  MAX_DEEP_DIVES_PER_COURSE,
+  MAX_SECTIONS_PER_COURSE,
+  SESSIONS_UPDATED_EVENT,
+} from "./constants"
 
 export default function HobbyPageClient() {
   const router = useRouter()
@@ -184,6 +189,12 @@ export default function HobbyPageClient() {
     moduleContext?: ModuleInDepthContext
   ) {
     if (!plan) return
+    if (lessons.length >= MAX_DEEP_DIVES_PER_COURSE) {
+      setError(
+        `Deep dive limit reached (${MAX_DEEP_DIVES_PER_COURSE}) for this course.`
+      )
+      return
+    }
     setLessonLoading(true)
     setError("")
 
@@ -252,6 +263,10 @@ export default function HobbyPageClient() {
 
   async function generateNextSection() {
     if (!plan || !sessionId) return
+    if (sectionsGenerated >= MAX_SECTIONS_PER_COURSE) {
+      setError(`Section limit reached (${MAX_SECTIONS_PER_COURSE}) for this course.`)
+      return
+    }
     setSectionLoading(true)
     setError("")
     let timeoutId: ReturnType<typeof setTimeout> | undefined
@@ -339,6 +354,8 @@ export default function HobbyPageClient() {
               onOpenLesson={openLesson}
               lessonLoading={lessonLoading}
               sectionLoading={sectionLoading}
+              sectionsGenerated={sectionsGenerated}
+              maxSections={MAX_SECTIONS_PER_COURSE}
               onGenerateNextSection={generateNextSection}
               initialOpenModuleId={searchParams.get("moduleId")}
             />

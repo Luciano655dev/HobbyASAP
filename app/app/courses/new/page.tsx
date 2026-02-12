@@ -8,8 +8,10 @@ import { INITIAL_STREAK, type SavedSession } from "../../hooks/useSessionsHistor
 import {
   LS_CURRENT_SESSION_KEY,
   LS_SESSIONS_KEY,
+  MAX_COURSES,
   SESSIONS_UPDATED_EVENT,
 } from "../../constants"
+import { useEffect } from "react"
 
 export default function NewCoursePage() {
   const router = useRouter()
@@ -18,6 +20,18 @@ export default function NewCoursePage() {
   const [language, setLanguage] = useState<"en" | "pt">("en")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [courseCount, setCourseCount] = useState(0)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem(LS_SESSIONS_KEY)
+      const parsed = raw ? JSON.parse(raw) : []
+      setCourseCount(Array.isArray(parsed) ? parsed.length : 0)
+    } catch {
+      setCourseCount(0)
+    }
+  }, [])
 
   function persistNewSession(snapshot: SavedSession) {
     const raw = localStorage.getItem(LS_SESSIONS_KEY)
@@ -39,6 +53,13 @@ export default function NewCoursePage() {
     const trimmed = hobby.trim()
     if (!trimmed) {
       setError("Please type a hobby.")
+      return
+    }
+
+    if (courseCount >= MAX_COURSES) {
+      setError(
+        `Course limit reached (${MAX_COURSES}). Delete a course before creating a new one.`
+      )
       return
     }
 
@@ -99,6 +120,7 @@ export default function NewCoursePage() {
       }
 
       persistNewSession(snapshot)
+      setCourseCount((prev) => prev + 1)
       router.push(`/app/learn?sessionId=${encodeURIComponent(id)}`)
     } catch (err: unknown) {
       setError(
@@ -138,6 +160,9 @@ export default function NewCoursePage() {
         <div className="mb-1 flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-text">Design your hobby path</h2>
           <div className="flex items-center gap-2">
+            <span className="rounded-full border border-border bg-surface-2 px-2.5 py-1 text-[10px] text-muted">
+              Courses: {courseCount}/{MAX_COURSES}
+            </span>
             <span className="text-[11px] text-muted">Language</span>
             <div className="inline-flex items-center rounded-full bg-surface-2 p-1 text-[11px]">
               <button
@@ -192,7 +217,7 @@ export default function NewCoursePage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || courseCount >= MAX_COURSES}
           className="mt-4 w-full rounded-xl bg-accent-strong hover:bg-accent text-white font-semibold px-4 py-2.5 text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? "Generating section 1..." : "Generate section 1"}

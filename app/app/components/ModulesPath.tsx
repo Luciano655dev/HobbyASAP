@@ -16,6 +16,8 @@ interface ModulesPathProps {
   plan: HobbyPlan
   completedTaskIds: string[]
   sectionModuleCounts: number[]
+  sectionsGenerated: number
+  maxSections: number
   onToggleTask: (id: string) => void
   onOpenLesson: (
     kind: "inDepth",
@@ -47,6 +49,8 @@ export default function ModulesPath({
   plan,
   completedTaskIds,
   sectionModuleCounts,
+  sectionsGenerated,
+  maxSections,
   onToggleTask,
   onOpenLesson,
   lessonLoading,
@@ -190,8 +194,11 @@ export default function ModulesPath({
   const completedModulesCount = modules.filter((module) =>
     completedTaskIds.includes(module.id)
   ).length
+  const sectionLimitReached = sectionsGenerated >= maxSections
   const canGenerateNextSection =
-    modules.length > 0 && completedModulesCount === modules.length
+    modules.length > 0 &&
+    completedModulesCount === modules.length &&
+    !sectionLimitReached
 
   return (
     <section className="mb-10">
@@ -465,6 +472,8 @@ export default function ModulesPath({
                 title={
                   canGenerateNextSection
                     ? "Generate next section"
+                    : sectionLimitReached
+                    ? `Section limit reached (${sectionsGenerated}/${maxSections})`
                     : `Complete all modules first (${completedModulesCount}/${modules.length})`
                 }
               >
@@ -474,7 +483,12 @@ export default function ModulesPath({
               </button>
             </div>
           )}
-          {onGenerateNextSection && !canGenerateNextSection && (
+          {onGenerateNextSection && sectionLimitReached && (
+            <p className="mt-2 text-center text-[11px] text-muted">
+              Section limit reached ({sectionsGenerated}/{maxSections}) for this course.
+            </p>
+          )}
+          {onGenerateNextSection && !canGenerateNextSection && !sectionLimitReached && (
             <p className="mt-2 text-center text-[11px] text-muted">
               Complete all modules to unlock the next section ({completedModulesCount}/
               {modules.length}).
