@@ -1,17 +1,15 @@
 "use client"
 
+import type { Route } from "next"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, type Variants } from "framer-motion"
 import { Trash2, X } from "lucide-react"
 import { useSessionsHistory } from "../hooks/useSessionsHistory"
-import {
-  LS_CURRENT_SESSION_KEY,
-  MAX_DEEP_DIVES_PER_COURSE,
-  SESSIONS_UPDATED_EVENT,
-} from "../constants"
+import { MAX_DEEP_DIVES_PER_COURSE } from "../constants"
 import type { Lesson } from "../types"
 import ConfirmModal from "../components/ConfirmModal"
+import { useAppData } from "../AppDataProvider"
 
 type DeepDiveItem = {
   sessionId: string
@@ -53,13 +51,10 @@ const modalVariants: Variants = {
 export default function DeepDivesPage() {
   const router = useRouter()
   const { history, saveSnapshot } = useSessionsHistory()
+  const { currentSessionId, setCurrentSessionId } = useAppData()
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [dismissedAutoOpen, setDismissedAutoOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<DeepDiveItem | null>(null)
-  const [currentSessionId] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null
-    return localStorage.getItem(LS_CURRENT_SESSION_KEY)
-  })
   const [shouldOpenLatestFromUrl] = useState(() => {
     if (typeof window === "undefined") return false
     return new URLSearchParams(window.location.search).get("openLatest") === "1"
@@ -139,18 +134,14 @@ export default function DeepDivesPage() {
   }
 
   function goToModule(item: DeepDiveItem) {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(LS_CURRENT_SESSION_KEY, item.sessionId)
-      window.dispatchEvent(new Event(SESSIONS_UPDATED_EVENT))
-    }
-
+    void setCurrentSessionId(item.sessionId)
     const url = item.moduleId
       ? `/app/learn?sessionId=${encodeURIComponent(item.sessionId)}&moduleId=${encodeURIComponent(
           item.moduleId
         )}`
       : `/app/learn?sessionId=${encodeURIComponent(item.sessionId)}`
 
-    router.push(url)
+    router.push(url as Route)
   }
 
   return (

@@ -1,52 +1,57 @@
 "use client"
 
+import type { Route } from "next"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { type HobbyPlan } from "../../types"
-import { INITIAL_STREAK, type SavedSession } from "../../hooks/useSessionsHistory"
-import {
-  LS_CURRENT_SESSION_KEY,
-  LS_SESSIONS_KEY,
-  MAX_COURSES,
-  SESSIONS_UPDATED_EVENT,
-} from "../../constants"
-import { useEffect } from "react"
+import { MAX_COURSES } from "../../constants"
+import { useAppData } from "../../AppDataProvider"
+import { useHydrated } from "@/app/lib/useHydrated"
+
+const LOADING_STEPS = [
+  "Checking whether this course already exists...",
+  "Assembling the learning path structure...",
+  "Saving your course to the workspace...",
+]
 
 export default function NewCoursePage() {
   const router = useRouter()
+  const {
+    history,
+    preferredLanguage,
+    setCurrentSessionId,
+    setPreferredLanguage,
+    refresh,
+  } = useAppData()
   const [hobby, setHobby] = useState("")
   const [level, setLevel] = useState("complete beginner")
-  const [language, setLanguage] = useState<"en" | "pt">("en")
+  const [language, setLanguage] = useState<"en" | "pt">(preferredLanguage)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [courseCount, setCourseCount] = useState(0)
+  const [loadingStepIndex, setLoadingStepIndex] = useState(0)
+  const hydrated = useHydrated()
+  const courseCount = history.length
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      const raw = localStorage.getItem(LS_SESSIONS_KEY)
-      const parsed = raw ? JSON.parse(raw) : []
-      setCourseCount(Array.isArray(parsed) ? parsed.length : 0)
-    } catch {
-      setCourseCount(0)
+    setLanguage(preferredLanguage)
+  }, [preferredLanguage])
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingStepIndex(0)
+      return
     }
-  }, [])
 
-  function persistNewSession(snapshot: SavedSession) {
-    const raw = localStorage.getItem(LS_SESSIONS_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
-    const previous = Array.isArray(parsed) ? parsed : []
+    const intervalId = window.setInterval(() => {
+      setLoadingStepIndex((current) =>
+        current < LOADING_STEPS.length - 1 ? current + 1 : current
+      )
+    }, 1800)
 
-    const updated = [snapshot, ...previous.filter((s) => s.id !== snapshot.id)].slice(
-      0,
-      20
-    )
-    localStorage.setItem(LS_SESSIONS_KEY, JSON.stringify(updated))
-    localStorage.setItem(LS_CURRENT_SESSION_KEY, snapshot.id)
-    localStorage.setItem("hobbyasap_lang", language)
-    window.dispatchEvent(new Event(SESSIONS_UPDATED_EVENT))
-  }
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [loading])
 
   async function handleStart(e: React.FormEvent) {
     e.preventDefault()
@@ -70,7 +75,7 @@ export default function NewCoursePage() {
     try {
       const controller = new AbortController()
       timeoutId = setTimeout(() => controller.abort(), 30000)
-      const res = await fetch("/api/generate", {
+      const res = await fetch("/api/course-sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -89,39 +94,17 @@ export default function NewCoursePage() {
       }
 
       const data = await res.json()
-      const plan = data.plan as HobbyPlan
-      const id = `${trimmed.toLowerCase()}_${Date.now()}`
-      const createdAt = new Date().toISOString()
-      const chatId = `chat_${Date.now()}`
+      await setPreferredLanguage(language)
+      await refresh()
 
-      const snapshot: SavedSession = {
-        id,
-        createdAt,
-        hobby: trimmed,
-        level,
-        icon: plan.icon || null,
-        plan,
-        sectionsGenerated: 1,
-        sectionModuleCounts: [plan.modules.length],
-        completedTaskIds: [],
-        streak: INITIAL_STREAK,
-        lessons: [],
-        chatThreads: [
-          {
-            id: chatId,
-            title: "New chat",
-            createdAt,
-            updatedAt: createdAt,
-            questions: [],
-          },
-        ],
-        activeChatId: chatId,
-        questions: [],
+      const sessionId =
+        typeof data.sessionId === "string" ? data.sessionId : null
+      if (!sessionId) {
+        throw new Error("Failed to create the course session.")
       }
 
-      persistNewSession(snapshot)
-      setCourseCount((prev) => prev + 1)
-      router.push(`/app/learn?sessionId=${encodeURIComponent(id)}`)
+      await setCurrentSessionId(sessionId)
+      router.push(`/app/learn?sessionId=${encodeURIComponent(sessionId)}` as Route)
     } catch (err: unknown) {
       setError(
         err instanceof Error && err.name === "AbortError"
@@ -134,6 +117,82 @@ export default function NewCoursePage() {
       if (timeoutId) clearTimeout(timeoutId)
       setLoading(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <section className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-4xl items-center px-4 py-8 sm:px-6">
+        <div className="w-full overflow-hidden rounded-[2rem] border border-border bg-surface shadow-lg">
+          <div className="border-b border-border bg-linear-to-r from-accent-soft via-surface to-surface px-6 py-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              Building your course
+            </p>
+            <h1 className="mt-2 text-3xl font-bold text-text">{hobby.trim()}</h1>
+            <p className="mt-2 text-sm text-muted">
+              {level} · {language === "pt" ? "Portuguese" : "English"}
+            </p>
+          </div>
+
+          <div className="space-y-6 px-6 py-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-accent/30 bg-accent-soft">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-text">
+                  Generating section 1 of your learning path
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  This usually takes a few seconds. You&apos;ll be redirected
+                  automatically when it finishes.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-surface-2 p-4">
+              <div className="mb-4 h-2 overflow-hidden rounded-full bg-surface">
+                <div
+                  className="h-full rounded-full bg-linear-to-r from-accent to-accent-strong transition-all duration-500"
+                  style={{
+                    width: `${((loadingStepIndex + 1) / LOADING_STEPS.length) * 100}%`,
+                  }}
+                />
+              </div>
+
+              <div className="space-y-3">
+                {LOADING_STEPS.map((step, index) => {
+                  const isDone = index < loadingStepIndex
+                  const isCurrent = index === loadingStepIndex
+
+                  return (
+                    <div key={step} className="flex items-center gap-3">
+                      <div
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold ${
+                          isDone
+                            ? "border-accent bg-accent text-white"
+                            : isCurrent
+                              ? "border-accent/50 bg-accent-soft text-accent"
+                              : "border-border bg-surface text-muted"
+                        }`}
+                      >
+                        {isDone ? "✓" : index + 1}
+                      </div>
+                      <p
+                        className={`text-sm ${
+                          isCurrent || isDone ? "text-text" : "text-muted"
+                        }`}
+                      >
+                        {step}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
   }
 
   return (
@@ -167,6 +226,7 @@ export default function NewCoursePage() {
             <div className="inline-flex items-center rounded-full bg-surface-2 p-1 text-[11px]">
               <button
                 type="button"
+                disabled={!hydrated || loading}
                 onClick={() => setLanguage("en")}
                 className={`px-2.5 py-1 rounded-full transition-colors ${
                   language === "en" ? "bg-surface text-accent" : "text-muted"
@@ -176,6 +236,7 @@ export default function NewCoursePage() {
               </button>
               <button
                 type="button"
+                disabled={!hydrated || loading}
                 onClick={() => setLanguage("pt")}
                 className={`px-2.5 py-1 rounded-full transition-colors ${
                   language === "pt" ? "bg-surface text-accent" : "text-muted"
@@ -189,21 +250,27 @@ export default function NewCoursePage() {
 
         <div className="mt-4 flex flex-col sm:flex-row gap-4">
           <div className="flex-1 space-y-1">
-            <label className="text-[11px] font-semibold text-muted">Hobby</label>
+            <label htmlFor="course-hobby" className="text-[11px] font-semibold text-muted">
+              Hobby
+            </label>
             <input
+              id="course-hobby"
               type="text"
               value={hobby}
+              disabled={!hydrated || loading}
               onChange={(e) => setHobby(e.target.value)}
               placeholder="Example: Fishing, Photography, Guitar, Coding..."
               className="mt-1 w-full rounded-xl px-3 py-2.5 bg-surface border border-border focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent text-sm text-text placeholder:text-muted"
             />
           </div>
           <div className="w-full sm:w-56 space-y-1">
-            <label className="text-[11px] font-semibold text-muted">
+            <label htmlFor="course-level" className="text-[11px] font-semibold text-muted">
               Your current level
             </label>
             <select
+              id="course-level"
               value={level}
+              disabled={!hydrated || loading}
               onChange={(e) => setLevel(e.target.value)}
               className="mt-1 w-full rounded-xl px-3 py-2.5 bg-surface border border-border focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent text-sm text-text"
             >
@@ -217,10 +284,14 @@ export default function NewCoursePage() {
 
         <button
           type="submit"
-          disabled={loading || courseCount >= MAX_COURSES}
+          disabled={!hydrated || loading || courseCount >= MAX_COURSES}
           className="mt-4 w-full rounded-xl bg-accent-strong hover:bg-accent text-white font-semibold px-4 py-2.5 text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? "Generating section 1..." : "Generate section 1"}
+          {!hydrated
+            ? "Preparing form..."
+            : loading
+              ? "Generating section 1..."
+              : "Generate section 1"}
         </button>
 
         {error && (

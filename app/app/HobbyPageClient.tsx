@@ -14,15 +14,15 @@ import {
 import PlanHeader from "./components/PlanHeader"
 import ModulesPath from "./components/ModulesPath"
 import {
-  LS_CURRENT_SESSION_KEY,
   MAX_DEEP_DIVES_PER_COURSE,
   MAX_SECTIONS_PER_COURSE,
-  SESSIONS_UPDATED_EVENT,
 } from "./constants"
+import { useAppData } from "./AppDataProvider"
 
 export default function HobbyPageClient() {
   const router = useRouter()
   const { history, saveSnapshot } = useSessionsHistory()
+  const { currentSessionId, preferredLanguage, setCurrentSessionId } = useAppData()
   const [querySessionId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null
     return new URLSearchParams(window.location.search).get("sessionId")
@@ -48,12 +48,6 @@ export default function HobbyPageClient() {
   const [sectionModuleCounts, setSectionModuleCounts] = useState<number[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [sessionCreatedAt, setSessionCreatedAt] = useState<string | null>(null)
-
-  const setCurrentSession = useCallback((sessionIdToSet: string) => {
-    if (typeof window === "undefined") return
-    localStorage.setItem(LS_CURRENT_SESSION_KEY, sessionIdToSet)
-    window.dispatchEvent(new Event(SESSIONS_UPDATED_EVENT))
-  }, [])
 
   const moduleIds = useMemo(() => {
     if (!plan) return []
@@ -119,25 +113,21 @@ export default function HobbyPageClient() {
       setStreak(session.streak)
       setSessionId(session.id)
       setSessionCreatedAt(session.createdAt)
-      setCurrentSession(session.id)
+      void setCurrentSessionId(session.id)
     },
-    [setCurrentSession]
+    [setCurrentSessionId]
   )
 
   useEffect(() => {
     if (!history.length) return
 
-    const storedCurrent =
-      typeof window !== "undefined"
-        ? localStorage.getItem(LS_CURRENT_SESSION_KEY)
-        : null
-    const targetSessionId = querySessionId || storedCurrent || history[0]?.id
+    const targetSessionId = querySessionId || currentSessionId || history[0]?.id
     if (!targetSessionId || targetSessionId === sessionId) return
 
     const targetSession = history.find((item) => item.id === targetSessionId)
     if (!targetSession) return
     loadFromHistory(targetSession)
-  }, [history, querySessionId, sessionId, loadFromHistory])
+  }, [currentSessionId, history, querySessionId, sessionId, loadFromHistory])
 
   useEffect(() => {
     if (!plan || !sessionId) return
@@ -205,7 +195,6 @@ export default function HobbyPageClient() {
     setError("")
 
     try {
-      const language = localStorage.getItem("hobbyasap_lang") ?? "en"
       const res = await fetch("/api/lesson", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -214,7 +203,7 @@ export default function HobbyPageClient() {
           level: plan.level,
           kind,
           topic,
-          language,
+          language: preferredLanguage,
           moduleContext,
         }),
       })
@@ -278,19 +267,11 @@ export default function HobbyPageClient() {
     let timeoutId: ReturnType<typeof setTimeout> | undefined
 
     try {
-      const language = localStorage.getItem("hobbyasap_lang") ?? "en"
       const controller = new AbortController()
       timeoutId = setTimeout(() => controller.abort(), 30000)
 
-      const res = await fetch("/api/generate", {
+      const res = await fetch(`/api/course-sessions/${sessionId}/extend`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hobby: plan.hobby,
-          level: plan.level,
-          language,
-          existingModules: plan.modules,
-        }),
         signal: controller.signal,
       })
 
@@ -303,18 +284,17 @@ export default function HobbyPageClient() {
 
       const data = await res.json()
       const nextPlan = data.plan as HobbyPlan
-      const addedModules = Array.isArray(nextPlan.modules) ? nextPlan.modules : []
-      if (addedModules.length === 0) {
-        throw new Error("AI did not return modules for the next section.")
-      }
+      const nextSectionsGenerated =
+        typeof data.sectionsGenerated === "number"
+          ? data.sectionsGenerated
+          : sectionsGenerated + 1
+      const nextSectionModuleCounts = Array.isArray(data.sectionModuleCounts)
+        ? (data.sectionModuleCounts as number[])
+        : sectionModuleCounts
 
-      const mergedPlan: HobbyPlan = {
-        ...plan,
-        modules: [...plan.modules, ...addedModules],
-      }
-      setPlan(mergedPlan)
-      setSectionsGenerated((prev) => prev + 1)
-      setSectionModuleCounts((prev) => [...prev, addedModules.length])
+      setPlan(nextPlan)
+      setSectionsGenerated(nextSectionsGenerated)
+      setSectionModuleCounts(nextSectionModuleCounts)
     } catch (err: unknown) {
       setError(
         err instanceof Error && err.name === "AbortError"

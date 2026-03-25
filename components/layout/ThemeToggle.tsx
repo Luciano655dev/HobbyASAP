@@ -13,20 +13,30 @@ function applyTheme(next: Theme) {
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "light"
-    const saved = localStorage.getItem(STORAGE_KEY)
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-    return saved === "light" || saved === "dark"
-      ? saved
-      : prefersDark
-      ? "dark"
-      : "light"
-  })
+  const [theme, setTheme] = useState<Theme>("light")
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const saved = localStorage.getItem(STORAGE_KEY)
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+    const resolvedTheme: Theme =
+      saved === "light" || saved === "dark"
+        ? saved
+        : prefersDark
+          ? "dark"
+          : "light"
+
+    setTheme(resolvedTheme)
+    applyTheme(resolvedTheme)
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
     applyTheme(theme)
-  }, [theme])
+  }, [mounted, theme])
 
   function toggleTheme() {
     const next: Theme = theme === "dark" ? "light" : "dark"
@@ -45,7 +55,9 @@ export default function ThemeToggle() {
       title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text shadow-sm transition hover:border-accent/50 hover:bg-surface-2"
     >
-      {theme === "dark" ? (
+      {!mounted ? (
+        <Moon className="h-4 w-4" />
+      ) : theme === "dark" ? (
         <Sun className="h-4 w-4" />
       ) : (
         <Moon className="h-4 w-4" />

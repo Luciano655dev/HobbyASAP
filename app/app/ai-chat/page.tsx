@@ -7,28 +7,22 @@ import AskQuestionPanel, { type QAItem } from "../AskQuestionPanel"
 import { type Lesson } from "../types"
 import { useSessionsHistory } from "../hooks/useSessionsHistory"
 import {
-  LS_CURRENT_SESSION_KEY,
   MAX_CHAT_THREADS_PER_COURSE,
   MAX_DEEP_DIVES_PER_COURSE,
   MAX_QUESTIONS_TOTAL,
 } from "../constants"
 import ConfirmModal from "../components/ConfirmModal"
+import { useAppData } from "../AppDataProvider"
 
 export default function AiChatPage() {
   const router = useRouter()
   const { history, saveSnapshot } = useSessionsHistory()
+  const { currentSession, preferredLanguage } = useAppData()
   const [lessonLoading, setLessonLoading] = useState(false)
   const [pendingDeleteChatId, setPendingDeleteChatId] = useState<string | null>(
     null
   )
   const [chatLimitError, setChatLimitError] = useState("")
-
-  const currentSession = useMemo(() => {
-    if (typeof window === "undefined") return null
-    const currentId = localStorage.getItem(LS_CURRENT_SESSION_KEY)
-    if (!currentId) return null
-    return history.find((item) => item.id === currentId) ?? null
-  }, [history])
 
   const chatThreads = useMemo(() => {
     if (!currentSession) return []
@@ -179,7 +173,6 @@ export default function AiChatPage() {
     setLessonLoading(true)
 
     try {
-      const language = localStorage.getItem("hobbyasap_lang") ?? "en"
       const res = await fetch("/api/lesson", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -188,7 +181,7 @@ export default function AiChatPage() {
           level: currentSession.plan.level,
           kind: "inDepth",
           topic,
-          language,
+          language: preferredLanguage,
         }),
       })
       if (!res.ok) return

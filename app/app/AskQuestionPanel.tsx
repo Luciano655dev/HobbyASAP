@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion, type Variants } from "framer-motion"
 import { Bot, Trash2, User } from "lucide-react"
 import type { HobbyPlan, Lesson } from "./types"
+import { useAppData } from "./AppDataProvider"
 
 export interface QATask {
   label: string
@@ -107,6 +108,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
   const [selectedDeepDiveIndexes, setSelectedDeepDiveIndexes] = useState<number[]>(
     []
   )
+  const { preferredLanguage } = useAppData()
 
   const hasContext = !!plan
   const selectedContextCount =
@@ -162,8 +164,6 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
 
     setLoading(true)
     try {
-      const language = localStorage.getItem("hobbyasap_lang") ?? "en"
-
       const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -171,7 +171,7 @@ export default function AskQuestionPanel(props: AskQuestionPanelProps) {
           question: question.trim(),
           plan,
           lessons,
-          language,
+          language: preferredLanguage,
           history: questions.map((item) => ({
             question: item.question,
             answer: item.answer,

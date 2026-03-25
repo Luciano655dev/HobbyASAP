@@ -12,7 +12,8 @@ Type a hobby → get a full layout with:
 - 🔍 In‑depth lessons
 - 💬 Q&A sessions
 - ⭐ XP, levels, streaks
-- ♻️ Local saved runs
+- 🔐 Login, registration, and protected app routes
+- ☁️ Supabase-synced saved runs
 
 Everything happens on a single page, with lessons stacking as you explore.
 
@@ -61,12 +62,13 @@ Reload any past session instantly.
 
 ## 🧩 Tech Stack
 
-- **Next.js 14** (App Router)
+- **Next.js 16** (App Router)
 - **React** (Client Components)
 - **Tailwind CSS**
 - **TypeScript**
+- **Supabase Auth + Postgres**
 - **AI Generation APIs** (Groq / OpenAI)
-- **LocalStorage persistence**
+- **Redis** for metrics / token limits
 - Custom **XP engine**, **streak logic**, and **task system**
 
 ---
@@ -97,15 +99,42 @@ Create `.env.local`:
 ```bash
 GROQ_API_KEY=your_key
 REDIS_URL=your_redis_url
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SITE_URL=https://hobbyasap.com
+NEXT_PUBLIC_SENTRY_DSN=your_public_sentry_dsn
+SENTRY_DSN=your_server_sentry_dsn
+SENTRY_AUTH_TOKEN=your_sentry_auth_token
+SENTRY_ORG=your_sentry_org_slug
+SENTRY_PROJECT=your_sentry_project_slug
 ```
 
-NOTE: TO get he Redis URL, create a Redis Database ont he Storage of your Vercel app.
+Run the SQL in [supabase/schema.sql](/Users/lucianomenezes/Documents/GitHub/hobbyasap/supabase/schema.sql) inside the Supabase SQL editor before starting the app.
+If you already ran an older version of the schema, run the updated SQL again so `course_templates`, `user_course_sessions`, and `lesson_templates` are created for shared course/deep-dive reuse.
+
+Redis note: create a Redis database in your Vercel storage dashboard.
 
 Run development server:
 
 ```bash
 npm run dev
 ```
+
+Database workflow with Supabase CLI:
+
+```bash
+npm run db:reset
+npm run db:push
+npm run db:pull
+```
+
+End-to-end tests:
+
+```bash
+npm run test:e2e
+```
+
+Playwright note: install browser binaries first if needed with `npx playwright install`.
 
 Visit:
 
@@ -137,7 +166,6 @@ git push origin feature/my-change
 
 ## 🗺️ Next Steps
 
-- User login + cloud sync
 - Notes inside lessons
 - Public lesson sharing
 - Skill trees

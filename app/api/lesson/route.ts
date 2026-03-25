@@ -9,13 +9,28 @@ import {
   addGlobalTokens,
   type GlobalTokenBudget,
 } from "@/app/lib/groqGlobalLimit"
+import { requireAuthenticatedUser } from "@/app/lib/auth"
+import { getSupabaseAdminClient } from "@/app/lib/supabase/admin"
+import {
+  buildSharedLessonCacheKey,
+  type SharedLessonRow,
+} from "@/app/lib/sharedLessons"
+import { logError, logInfo, logWarn } from "@/app/lib/logger"
+import { checkRateLimit } from "@/app/lib/rateLimit"
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 })
 
 export async function POST(req: Request) {
+  const requestId = crypto.randomUUID()
+
   try {
+    const auth = await requireAuthenticatedUser()
+    if (auth.response) {
+      return auth.response
+    }
+
     const { hobby, level, kind, topic, language, moduleContext } =
       await req.json()
 
@@ -34,6 +49,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Topic is required." }, { status: 400 })
     }
 
+    const rateLimit = await checkRateLimit({
+      request: req,
+      namespace: "lesson:generate",
+      limit: 20,
+      windowSeconds: 60 * 10,
+      userId: auth.user.id,
+    })
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many deep dive requests. Please wait a few minutes.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
+        }
+      )
+    }
+
     // === GLOBAL TOKEN LIMIT CHECK ===
     const budget: GlobalTokenBudget = await checkGlobalTokenBudget()
     if (!budget.allowed) {
@@ -50,9 +87,60 @@ export async function POST(req: Request) {
       typeof level === "string" && level.trim() ? level : "complete beginner"
 
     const lang = language === "pt" ? "pt" : "en"
-    const systemPrompt: any = getSystemPrompt(lang)
+    const systemPrompt = getSystemPrompt(lang)
 
     const normalizedModuleContext = normalizeModuleContext(moduleContext)
+    const lessonCacheKey = buildSharedLessonCacheKey({
+      hobby,
+      level: userLevel,
+      language: lang,
+      kind,
+      topic,
+      moduleContext: normalizedModuleContext,
+    })
+    const adminClient = getSupabaseAdminClient()
+    const { data: cachedLessonData, error: cachedLessonError } = await adminClient
+      .from("lesson_templates")
+      .select("id, cache_key, hobby, level, language, kind, topic, module_context, lesson")
+      .eq("cache_key", lessonCacheKey)
+      .maybeSingle()
+
+    if (cachedLessonError) {
+      logWarn({
+        event: "lesson_cache_lookup_failed",
+        requestId,
+        route: "/api/lesson",
+        userId: auth.user.id,
+        error: cachedLessonError,
+      })
+    } else if (cachedLessonData) {
+      logInfo({
+        event: "lesson_cache_hit",
+        requestId,
+        route: "/api/lesson",
+        userId: auth.user.id,
+        metadata: {
+          cacheKey: lessonCacheKey,
+          lessonId: (cachedLessonData as SharedLessonRow).id,
+        },
+      })
+      return NextResponse.json({
+        lesson: (cachedLessonData as SharedLessonRow).lesson,
+        cached: true,
+      })
+    }
+
+    logInfo({
+      event: "lesson_cache_miss",
+      requestId,
+      route: "/api/lesson",
+      userId: auth.user.id,
+      metadata: {
+        cacheKey: lessonCacheKey,
+        topic,
+        kind,
+      },
+    })
 
     const userPrompt = getLessonPrompt({
       hobby,
@@ -73,7 +161,7 @@ export async function POST(req: Request) {
     })
 
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
-    const usage = (completion as any).usage
+    const usage = (completion as { usage?: { total_tokens?: number } }).usage
     const usedTokens: number = usage?.total_tokens ?? 0
     if (budget.allowed) {
       await addGlobalTokens(budget.redis, budget.key, usedTokens)
@@ -92,7 +180,15 @@ export async function POST(req: Request) {
     const firstBrace = raw.indexOf("{")
     const lastBrace = raw.lastIndexOf("}")
     if (firstBrace === -1 || lastBrace === -1) {
-      console.error("No JSON braces found in lesson output:", raw)
+      logError({
+        event: "lesson_generation_invalid_json_shape",
+        requestId,
+        route: "/api/lesson",
+        userId: auth.user.id,
+        metadata: {
+          rawPreview: raw.slice(0, 500),
+        },
+      })
       return NextResponse.json(
         { error: "AI response did not contain a valid JSON object." },
         { status: 500 }
@@ -105,7 +201,16 @@ export async function POST(req: Request) {
     try {
       lesson = JSON.parse(jsonStr)
     } catch (parseErr) {
-      console.error("Lesson JSON parse error:", parseErr, "RAW:", raw)
+      logError({
+        event: "lesson_generation_json_parse_failed",
+        requestId,
+        route: "/api/lesson",
+        userId: auth.user.id,
+        error: parseErr,
+        metadata: {
+          rawPreview: raw.slice(0, 500),
+        },
+      })
       return NextResponse.json(
         { error: "AI returned invalid JSON for lesson." },
         { status: 500 }
@@ -139,9 +244,39 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ lesson })
+    const lessonInsert = {
+      cache_key: lessonCacheKey,
+      hobby: hobby.trim(),
+      level: userLevel.trim().toLowerCase(),
+      language: lang,
+      kind,
+      topic: topic.trim(),
+      module_context: normalizedModuleContext ?? null,
+      lesson,
+    }
+
+    const { error: insertLessonError } = await adminClient
+      .from("lesson_templates")
+      .insert(lessonInsert as never)
+
+    if (insertLessonError) {
+      logWarn({
+        event: "lesson_cache_insert_failed",
+        requestId,
+        route: "/api/lesson",
+        userId: auth.user.id,
+        error: insertLessonError,
+      })
+    }
+
+    return NextResponse.json({ lesson, cached: false })
   } catch (err) {
-    console.error(err)
+    logError({
+      event: "lesson_generation_failed",
+      requestId,
+      route: "/api/lesson",
+      error: err,
+    })
     return NextResponse.json(
       { error: "Something went wrong generating the lesson." },
       { status: 500 }

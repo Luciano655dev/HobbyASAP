@@ -1,10 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { useMemo } from "react"
 import { motion, type Variants } from "framer-motion"
 import { useSessionsHistory } from "../hooks/useSessionsHistory"
 import { useGlobalXpStats } from "../hooks/useXpStats"
-import { LS_CURRENT_SESSION_KEY, SESSIONS_UPDATED_EVENT } from "../constants"
+import { useAppData } from "../AppDataProvider"
+import { useAuth } from "@/components/auth/AuthProvider"
+import { getSupabaseBrowserClient } from "@/app/lib/supabase/client"
 
 function getSessionChatCount(session: {
   chatThreads?: { questions: { id: string }[] }[]
@@ -49,24 +52,9 @@ const cardVariants: Variants = {
 
 export default function ProfilePage() {
   const { history } = useSessionsHistory()
+  const { currentSessionId } = useAppData()
+  const { user } = useAuth()
   const xpStats = useGlobalXpStats(history)
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
-
-  useEffect(() => {
-    function syncCurrentSession() {
-      if (typeof window === "undefined") return
-      setCurrentSessionId(localStorage.getItem(LS_CURRENT_SESSION_KEY))
-    }
-
-    syncCurrentSession()
-    window.addEventListener(SESSIONS_UPDATED_EVENT, syncCurrentSession)
-    window.addEventListener("storage", syncCurrentSession)
-
-    return () => {
-      window.removeEventListener(SESSIONS_UPDATED_EVENT, syncCurrentSession)
-      window.removeEventListener("storage", syncCurrentSession)
-    }
-  }, [])
 
   const currentSession = useMemo(() => {
     if (!history.length) return null
@@ -181,6 +169,12 @@ export default function ProfilePage() {
     scored.sort((a, b) => b.score - a.score)
     return scored[0]
   }, [history])
+
+  async function handleSignOut() {
+    const supabase = getSupabaseBrowserClient()
+    await supabase.auth.signOut()
+    window.location.href = "/login"
+  }
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
@@ -346,6 +340,44 @@ export default function ProfilePage() {
             </p>
           </div>
         )}
+      </motion.div>
+
+      <motion.div
+        className="mt-4 rounded-2xl border border-border bg-surface p-4"
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.25 }}
+      >
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          Account
+        </p>
+        <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-text">
+              {user?.user_metadata?.full_name || "HobbyASAP account"}
+            </p>
+            <p className="mt-1 text-sm text-muted">{user?.email || "No email found"}</p>
+            <p className="mt-2 text-xs text-muted">
+              Manage your sign-in access and keep your saved courses tied to this account.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/forgot-password"
+              className="rounded-xl border border-border bg-surface-2 px-4 py-2 text-sm font-medium text-text hover:bg-surface"
+            >
+              Reset password
+            </Link>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="rounded-xl bg-accent-strong px-4 py-2 text-sm font-semibold text-white hover:bg-accent"
+            >
+              Log out
+            </button>
+          </div>
+        </div>
       </motion.div>
     </section>
   )

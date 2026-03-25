@@ -1,8 +1,8 @@
 "use client"
 
+import type { Route } from "next"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
 import {
   Bot,
   BookOpen,
@@ -12,11 +12,7 @@ import {
   PlusCircle,
   User,
 } from "lucide-react"
-import {
-  LS_CURRENT_SESSION_KEY,
-  LS_SESSIONS_KEY,
-  SESSIONS_UPDATED_EVENT,
-} from "../constants"
+import { useAppData } from "../AppDataProvider"
 
 const navItems = [
   { href: "/app/courses", label: "Courses", icon: Compass },
@@ -25,139 +21,68 @@ const navItems = [
   { href: "/app/profile", label: "Profile", icon: User },
 ] as const
 
+type SidebarNavItem = {
+  href: Route
+  label: string
+  icon: typeof BookOpen
+}
+
 function isActivePath(pathname: string | null, href: string) {
   return pathname === href || pathname?.startsWith(`${href}/`)
 }
 
 export default function AppSidebar() {
   const pathname = usePathname()
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
-  const [hasCourses, setHasCourses] = useState(false)
-  const [currentSession, setCurrentSession] = useState<null | {
-    hobby: string
-    icon: string | null
-    completedModules: number
-    totalModules: number
-  }>(null)
+  const { currentSession, currentSessionId, history } = useAppData()
 
-  useEffect(() => {
-    function syncCurrentCourse() {
-      try {
-        const raw = localStorage.getItem(LS_SESSIONS_KEY)
-        const sessions: unknown = raw ? JSON.parse(raw) : []
-        if (!Array.isArray(sessions) || sessions.length === 0) {
-          setHasCourses(false)
-          setCurrentSessionId(null)
-          setCurrentSession(null)
-          return
-        }
-        setHasCourses(true)
+  const currentCourseHref: Route = currentSessionId
+    ? (`/app/learn?sessionId=${encodeURIComponent(currentSessionId)}` as Route)
+    : "/app/courses/new"
 
-        const storedCurrentId = localStorage.getItem(LS_CURRENT_SESSION_KEY)
-        const fallbackId = sessions[0]?.id
-        const resolvedId = sessions.some((s) => s?.id === storedCurrentId)
-          ? storedCurrentId
-          : fallbackId
+  const completedModules = currentSession
+    ? currentSession.completedTaskIds.filter((id) =>
+        currentSession.plan.modules.some((module) => module.id === id)
+      ).length
+    : 0
 
-        if (resolvedId) {
-          localStorage.setItem(LS_CURRENT_SESSION_KEY, resolvedId)
-        }
+  const currentProgress =
+    currentSession && currentSession.plan.modules.length > 0
+      ? Math.round((completedModules / currentSession.plan.modules.length) * 100)
+      : 0
 
-        const current = sessions.find((s) => s?.id === resolvedId)
-        setCurrentSessionId(resolvedId ?? null)
-        if (!current) {
-          setCurrentSession(null)
-          return
-        }
-
-        const completedTaskIds = Array.isArray(current.completedTaskIds)
-          ? current.completedTaskIds
-          : []
-        const modules = Array.isArray(current.plan?.modules)
-          ? current.plan.modules
-          : []
-
-        const completedModules = completedTaskIds.filter((id: string) =>
-          modules.some((m: { id?: string }) => m.id === id)
-        ).length
-        const totalModules = modules.length
-
-        setCurrentSession({
-          hobby: typeof current.hobby === "string" ? current.hobby : "Current course",
-          icon:
-            typeof current.icon === "string" && current.icon.trim()
-              ? current.icon
-              : null,
-          completedModules,
-          totalModules,
-        })
-      } catch {
-        setHasCourses(false)
-        setCurrentSessionId(null)
-        setCurrentSession(null)
-      }
-    }
-
-    syncCurrentCourse()
-    window.addEventListener(SESSIONS_UPDATED_EVENT, syncCurrentCourse)
-    window.addEventListener("storage", syncCurrentCourse)
-
-    return () => {
-      window.removeEventListener(SESSIONS_UPDATED_EVENT, syncCurrentCourse)
-      window.removeEventListener("storage", syncCurrentCourse)
-    }
-  }, [])
-
-  const currentCourseHref = useMemo(() => {
-    if (!currentSessionId) return "/app/courses/new"
-    return `/app/learn?sessionId=${encodeURIComponent(currentSessionId)}`
-  }, [currentSessionId])
-
-  const currentProgress = useMemo(() => {
-    if (!currentSession || currentSession.totalModules === 0) return 0
-    return Math.round(
-      (currentSession.completedModules / currentSession.totalModules) * 100
-    )
-  }, [currentSession])
-
-  const mobileItems = [
+  const mobileItems: SidebarNavItem[] = [
     { href: currentCourseHref, label: "Current", icon: BookOpen },
     { href: "/app/courses", label: "Courses", icon: Compass },
     { href: "/app/deep-dives", label: "Deep Dives", icon: Layers },
     { href: "/app/ai-chat", label: "AI Chat", icon: Bot },
-    { href: "/app/profile", label: "Profile", icon: User },
-  ] as const
+  ]
 
   return (
     <>
-      <aside className="hidden border-r border-border/80 bg-surface/95 md:sticky md:top-0 md:flex md:h-screen md:w-72 md:flex-col">
-        <div className="border-b border-border/80 px-4 py-4">
-          <Link href={hasCourses ? "/app/learn" : "/app/courses/new"} className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-sm font-bold text-white">
-              H
-            </div>
+      <aside className="hidden w-80 shrink-0 border-r border-border bg-surface/80 md:flex md:flex-col">
+        <div className="border-b border-border px-5 py-5">
+          <p className="text-[11px] uppercase tracking-wide text-muted">Workspace</p>
+          <div className="mt-2">
             <div>
-              <p className="text-[15px] font-bold leading-none tracking-[-0.01em] text-text">
-                HobbyASAP
-              </p>
-              <p className="mt-0.5 text-[10px] leading-tight text-muted">
-                Daily learning quests
+              <h2 className="text-lg font-semibold text-text">Your courses</h2>
+              <p className="text-xs text-muted">
+                {history.length} saved {history.length === 1 ? "course" : "courses"}
               </p>
             </div>
-          </Link>
+          </div>
         </div>
 
-        <div className="px-3 py-3">
+        <div className="px-3 pt-3">
           <Link
             href="/app/courses/new"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-3 py-2 text-xs font-semibold text-accent transition hover:border-accent/50 hover:bg-accent/20"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-accent-strong px-4 py-3 text-sm font-semibold text-white hover:bg-accent"
           >
             <PlusCircle className="h-4 w-4" />
             <span>New Course</span>
           </Link>
         </div>
 
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3 pt-3">
           <Link
             href={currentCourseHref}
             className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 transition ${
@@ -175,7 +100,7 @@ export default function AppSidebar() {
               </p>
               <p className="text-[10px] text-muted">
                 {currentSession
-                  ? `${currentSession.completedModules}/${currentSession.totalModules} • ${currentProgress}%`
+                  ? `${completedModules}/${currentSession.plan.modules.length} • ${currentProgress}%`
                   : "Create a course to start"}
               </p>
             </div>
@@ -184,7 +109,7 @@ export default function AppSidebar() {
         </div>
 
         <nav className="flex-1 space-y-1 px-2 pb-4">
-          {[
+          {([
             {
               href: currentCourseHref,
               label: "Learn",
@@ -195,7 +120,7 @@ export default function AppSidebar() {
               ...item,
               active: isActivePath(pathname, item.href),
             })),
-          ].map((item) => {
+          ] as Array<SidebarNavItem & { active: boolean }>).map((item) => {
             const Icon = item.icon
             return (
               <Link
@@ -211,9 +136,7 @@ export default function AppSidebar() {
                 <span className="font-medium">{item.label}</span>
                 <ChevronRight
                   className={`ml-auto h-4 w-4 transition ${
-                    item.active
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100"
+                    item.active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 />
               </Link>

@@ -6,6 +6,9 @@ import {
   checkGlobalTokenBudget,
   addGlobalTokens,
 } from "@/app/lib/groqGlobalLimit"
+import { requireAuthenticatedUser } from "@/app/lib/auth"
+import { logError, logInfo } from "@/app/lib/logger"
+import { checkRateLimit } from "@/app/lib/rateLimit"
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -46,7 +49,14 @@ function readAllowedTokenBudget(value: unknown): TokenBudgetAllowed | null {
 }
 
 export async function POST(req: Request) {
+  const requestId = crypto.randomUUID()
+
   try {
+    const auth = await requireAuthenticatedUser()
+    if (auth.response) {
+      return auth.response
+    }
+
     const body = await req.json().catch(() => null)
 
     if (!body) {
@@ -70,8 +80,34 @@ export async function POST(req: Request) {
       )
     }
 
+    const rateLimit = await checkRateLimit({
+      request: req,
+      namespace: "ask:question",
+      limit: 40,
+      windowSeconds: 60 * 10,
+      userId: auth.user?.id,
+    })
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many AI chat requests. Please wait a few minutes.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
+        }
+      )
+    }
+
     if (!process.env.GROQ_API_KEY) {
-      console.error("Missing GROQ_API_KEY")
+      logError({
+        event: "ask_route_missing_groq_api_key",
+        requestId,
+        route: "/api/ask",
+      })
       return NextResponse.json(
         { error: "Server misconfiguration: missing GROQ_API_KEY." },
         { status: 500 }
@@ -210,7 +246,15 @@ export async function POST(req: Request) {
     const firstBrace = raw.indexOf("{")
     const lastBrace = raw.lastIndexOf("}")
     if (firstBrace === -1 || lastBrace === -1) {
-      console.error("No JSON braces found in ask output:", raw)
+      logError({
+        event: "ask_route_invalid_json_shape",
+        requestId,
+        route: "/api/ask",
+        userId: auth.user?.id,
+        metadata: {
+          rawPreview: raw.slice(0, 500),
+        },
+      })
       return NextResponse.json(
         {
           error:
@@ -236,7 +280,16 @@ export async function POST(req: Request) {
     try {
       parsed = JSON.parse(jsonStr)
     } catch (err) {
-      console.error("JSON parse error in ask route:", err, "RAW:", raw)
+      logError({
+        event: "ask_route_json_parse_failed",
+        requestId,
+        route: "/api/ask",
+        userId: auth.user?.id,
+        error: err,
+        metadata: {
+          rawPreview: raw.slice(0, 500),
+        },
+      })
       return NextResponse.json(
         {
           error:
@@ -258,6 +311,18 @@ export async function POST(req: Request) {
     }
 
     const tasks = Array.isArray(parsed.tasks) ? parsed.tasks : []
+    logInfo({
+      event: "ask_route_completed",
+      requestId,
+      route: "/api/ask",
+      userId: auth.user?.id,
+      metadata: {
+        selectedContextCount,
+        tasksReturned: tasks.length,
+        hasInDepthTopic:
+          typeof parsed.inDepthTopic === "string" && parsed.inDepthTopic.trim().length > 0,
+      },
+    })
     const inDepthTopic =
       typeof parsed.inDepthTopic === "string" && parsed.inDepthTopic.trim()
         ? parsed.inDepthTopic.trim()
@@ -269,7 +334,12 @@ export async function POST(req: Request) {
       inDepthTopic,
     })
   } catch (err) {
-    console.error("Ask API error:", err)
+    logError({
+      event: "ask_route_failed",
+      requestId,
+      route: "/api/ask",
+      error: err,
+    })
     return NextResponse.json(
       { error: "Something went wrong answering your question." },
       { status: 500 }

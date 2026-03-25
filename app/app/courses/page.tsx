@@ -1,53 +1,33 @@
 "use client"
 
+import type { Route } from "next"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Sparkles } from "lucide-react"
 import HistoryPanel from "../components/HistoryPanel"
 import { useSessionsHistory, type SavedSession } from "../hooks/useSessionsHistory"
-import {
-  LS_CURRENT_SESSION_KEY,
-  SESSIONS_UPDATED_EVENT,
-} from "../constants"
-
-function setCurrentSession(id: string | null) {
-  if (typeof window === "undefined") return
-
-  if (id) {
-    localStorage.setItem(LS_CURRENT_SESSION_KEY, id)
-  } else {
-    localStorage.removeItem(LS_CURRENT_SESSION_KEY)
-  }
-  window.dispatchEvent(new Event(SESSIONS_UPDATED_EVENT))
-}
+import { useAppData } from "../AppDataProvider"
 
 export default function CoursesPage() {
   const router = useRouter()
   const { history, deleteSession, clearAllSessions } = useSessionsHistory()
+  const { setCurrentSessionId } = useAppData()
   const totalModules = history.reduce(
     (sum, session) => sum + session.plan.modules.length,
     0
   )
 
-  function handleLoad(session: SavedSession) {
-    setCurrentSession(session.id)
-    router.push(`/app/learn?sessionId=${encodeURIComponent(session.id)}`)
+  async function handleLoad(session: SavedSession) {
+    await setCurrentSessionId(session.id)
+    router.push(`/app/learn?sessionId=${encodeURIComponent(session.id)}` as Route)
   }
 
   function handleDelete(id: string) {
-    deleteSession(id)
-
-    if (typeof window === "undefined") return
-    const current = localStorage.getItem(LS_CURRENT_SESSION_KEY)
-    if (current === id) {
-      const next = history.find((item) => item.id !== id)?.id ?? null
-      setCurrentSession(next)
-    }
+    void deleteSession(id)
   }
 
   function handleClearAll() {
-    clearAllSessions()
-    setCurrentSession(null)
+    void clearAllSessions()
   }
 
   return (
