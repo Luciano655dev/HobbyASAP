@@ -6,6 +6,9 @@ import {
   checkGlobalTokenBudget,
   addGlobalTokens,
 } from "@/app/lib/groqGlobalLimit"
+import { requireAuthenticatedUser } from "@/app/lib/auth"
+import { logError, logInfo } from "@/app/lib/logger"
+import { checkRateLimit } from "@/app/lib/rateLimit"
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -16,8 +19,44 @@ interface HistoryItem {
   answer: string
 }
 
+interface ContextSelection {
+  includeCourse?: boolean
+  moduleIds?: string[]
+  deepDiveIndexes?: number[]
+  includeHistory?: boolean
+}
+
+type TokenBudgetAllowed = {
+  redis: Parameters<typeof addGlobalTokens>[0]
+  key: string
+}
+
+function readAllowedTokenBudget(value: unknown): TokenBudgetAllowed | null {
+  if (!value || typeof value !== "object") return null
+
+  const candidate = value as {
+    allowed?: unknown
+    redis?: unknown
+    key?: unknown
+  }
+
+  if (candidate.allowed !== true) return null
+
+  const redis = (candidate.redis ?? null) as Parameters<typeof addGlobalTokens>[0]
+  const key = typeof candidate.key === "string" ? candidate.key : ""
+
+  return { redis, key }
+}
+
 export async function POST(req: Request) {
+  const requestId = crypto.randomUUID()
+
   try {
+    const auth = await requireAuthenticatedUser()
+    if (auth.response) {
+      return auth.response
+    }
+
     const body = await req.json().catch(() => null)
 
     if (!body) {
@@ -29,7 +68,10 @@ export async function POST(req: Request) {
       plan?: HobbyPlan | null
       lessons?: Lesson[] | null
       history?: HistoryItem[] | null
+      contextSelection?: ContextSelection | null
     }
+    const contextSelection = (body as { contextSelection?: ContextSelection | null })
+      .contextSelection
 
     if (!question || typeof question !== "string" || !question.trim()) {
       return NextResponse.json(
@@ -38,18 +80,34 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!plan) {
+    const rateLimit = await checkRateLimit({
+      request: req,
+      namespace: "ask:question",
+      limit: 40,
+      windowSeconds: 60 * 10,
+      userId: auth.user?.id,
+    })
+
+    if (!rateLimit.allowed) {
       return NextResponse.json(
         {
-          error:
-            "No plan context provided. Generate a plan first, then ask a question about it.",
+          error: "Too many AI chat requests. Please wait a few minutes.",
         },
-        { status: 400 }
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
+        }
       )
     }
 
     if (!process.env.GROQ_API_KEY) {
-      console.error("Missing GROQ_API_KEY")
+      logError({
+        event: "ask_route_missing_groq_api_key",
+        requestId,
+        route: "/api/ask",
+      })
       return NextResponse.json(
         { error: "Server misconfiguration: missing GROQ_API_KEY." },
         { status: 500 }
@@ -57,8 +115,8 @@ export async function POST(req: Request) {
     }
 
     // === GLOBAL TOKEN LIMIT CHECK ===
-    const budget: any = await checkGlobalTokenBudget()
-    if (!budget.allowed) {
+    const budget = readAllowedTokenBudget(await checkGlobalTokenBudget())
+    if (!budget) {
       return NextResponse.json(
         {
           error:
@@ -70,17 +128,71 @@ export async function POST(req: Request) {
 
     const safeLessons = Array.isArray(lessons) ? lessons : []
     const safeHistory = Array.isArray(history) ? history.slice(-5) : [] // last 5 QAs max
+    const includeCourse = !!contextSelection?.includeCourse
+    const selectedModuleIds = Array.isArray(contextSelection?.moduleIds)
+      ? contextSelection!.moduleIds!.filter((x) => typeof x === "string" && x.trim())
+      : []
+    const selectedDeepDiveIndexes = Array.isArray(contextSelection?.deepDiveIndexes)
+      ? contextSelection!.deepDiveIndexes!.filter(
+          (x) => Number.isInteger(x) && x >= 0
+        )
+      : []
+    const includeHistory = !!contextSelection?.includeHistory
 
-    const planSummary = buildPlanSummary(plan)
-    const lessonsSummary = buildLessonsSummary(safeLessons)
-    const historySummary = buildHistorySummary(safeHistory)
+    const selectedContextCount =
+      Number(includeCourse) +
+      Number(selectedModuleIds.length > 0) +
+      Number(selectedDeepDiveIndexes.length > 0) +
+      Number(includeHistory)
+
+    if (selectedContextCount === 0) {
+      return NextResponse.json(
+        { error: "Select at least one context before asking the AI." },
+        { status: 400 }
+      )
+    }
+
+    if (!plan && (includeCourse || selectedModuleIds.length > 0)) {
+      return NextResponse.json(
+        { error: "Course/module context is unavailable right now." },
+        { status: 400 }
+      )
+    }
+
+    if (!safeLessons.length && selectedDeepDiveIndexes.length > 0) {
+      return NextResponse.json(
+        { error: "Deep dive context is unavailable right now." },
+        { status: 400 }
+      )
+    }
+
+    const contextBlocks: string[] = []
+    if (includeCourse && plan) {
+      contextBlocks.push(buildCourseSummary(plan))
+    }
+    if (selectedModuleIds.length > 0 && plan) {
+      contextBlocks.push(buildModulesSummary(plan, selectedModuleIds))
+    }
+    if (selectedDeepDiveIndexes.length > 0) {
+      contextBlocks.push(
+        buildSelectedDeepDivesSummary(safeLessons, selectedDeepDiveIndexes)
+      )
+    }
+    if (includeHistory) {
+      const historySummary = buildHistorySummary(safeHistory)
+      contextBlocks.push(
+        historySummary
+          ? `=== Recent Q&A history ===\n${historySummary}`
+          : "=== Recent Q&A history ===\n(no previous questions)"
+      )
+    }
 
     // We force JSON output with answer + tasks + inDepthTopic
     const systemPrompt =
       "You are HobbyASAP Coach, an expert hobby mentor.\n" +
-      "- You answer questions using ONLY the provided plan, lessons, and Q&A history.\n" +
+      "- You answer questions using ONLY the selected context provided by the user.\n" +
       "- Explain in clear, simple language and give concrete, actionable steps.\n" +
-      "- You are allowed to add extra tiny practice tasks that fit the plan, but It is not obrigatory.\n" +
+      "- You are allowed to add extra tiny practice tasks when useful, but it is optional.\n" +
       "- If user seems to want more depth on a specific topic, you may suggest an inDepthTopic.\n\n" +
       "You MUST respond with VALID JSON ONLY (no markdown, no prose around it) in this exact shape:\n" +
       `{
@@ -99,13 +211,9 @@ export async function POST(req: Request) {
       "- Do NOT add any extra top-level keys.\n"
 
     const userPrompt =
-      `Here is the current hobby plan:\n\n` +
-      `${planSummary}\n\n` +
-      `Here are masterclasses / in-depth lessons (if any):\n\n` +
-      `${lessonsSummary || "(no extra lessons yet)"}\n\n` +
-      `Here is recent Q&A history for this user:\n\n` +
-      `${historySummary || "(no previous questions)"}\n\n` +
-      `Now answer this NEW question based ONLY on the content above:\n` +
+      `User-selected context:\n\n` +
+      `${contextBlocks.join("\n\n")}\n\n` +
+      `Now answer this NEW question based ONLY on the selected context above:\n` +
       `Q: ${question.trim()}\n\n` +
       `Remember to return valid JSON with fields: answer, tasks, inDepthTopic.`
 
@@ -120,7 +228,7 @@ export async function POST(req: Request) {
     })
 
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
-    const usage = (completion as any).usage
+    const usage = (completion as { usage?: { total_tokens?: number } }).usage
     const usedTokens: number = usage?.total_tokens ?? 0
     await addGlobalTokens(budget.redis, budget.key, usedTokens)
 
@@ -138,7 +246,15 @@ export async function POST(req: Request) {
     const firstBrace = raw.indexOf("{")
     const lastBrace = raw.lastIndexOf("}")
     if (firstBrace === -1 || lastBrace === -1) {
-      console.error("No JSON braces found in ask output:", raw)
+      logError({
+        event: "ask_route_invalid_json_shape",
+        requestId,
+        route: "/api/ask",
+        userId: auth.user?.id,
+        metadata: {
+          rawPreview: raw.slice(0, 500),
+        },
+      })
       return NextResponse.json(
         {
           error:
@@ -164,7 +280,16 @@ export async function POST(req: Request) {
     try {
       parsed = JSON.parse(jsonStr)
     } catch (err) {
-      console.error("JSON parse error in ask route:", err, "RAW:", raw)
+      logError({
+        event: "ask_route_json_parse_failed",
+        requestId,
+        route: "/api/ask",
+        userId: auth.user?.id,
+        error: err,
+        metadata: {
+          rawPreview: raw.slice(0, 500),
+        },
+      })
       return NextResponse.json(
         {
           error:
@@ -186,6 +311,18 @@ export async function POST(req: Request) {
     }
 
     const tasks = Array.isArray(parsed.tasks) ? parsed.tasks : []
+    logInfo({
+      event: "ask_route_completed",
+      requestId,
+      route: "/api/ask",
+      userId: auth.user?.id,
+      metadata: {
+        selectedContextCount,
+        tasksReturned: tasks.length,
+        hasInDepthTopic:
+          typeof parsed.inDepthTopic === "string" && parsed.inDepthTopic.trim().length > 0,
+      },
+    })
     const inDepthTopic =
       typeof parsed.inDepthTopic === "string" && parsed.inDepthTopic.trim()
         ? parsed.inDepthTopic.trim()
@@ -197,7 +334,12 @@ export async function POST(req: Request) {
       inDepthTopic,
     })
   } catch (err) {
-    console.error("Ask API error:", err)
+    logError({
+      event: "ask_route_failed",
+      requestId,
+      route: "/api/ask",
+      error: err,
+    })
     return NextResponse.json(
       { error: "Something went wrong answering your question." },
       { status: 500 }
@@ -206,197 +348,60 @@ export async function POST(req: Request) {
 }
 
 /**
- * Turn the HobbyPlan into a compact text summary so the model has structure/context
+ * Compact summary for full-course context
  */
-function buildPlanSummary(plan: HobbyPlan): string {
-  const parts: string[] = []
-
-  parts.push(
-    `Hobby: ${plan.hobby}\nLevel: ${plan.level}\nIcon: ${plan.icon || ""}`
-  )
-
-  for (const section of plan.sections) {
-    parts.push(
-      `\n=== Section: ${section.kind.toUpperCase()} – ${section.title} ===`
-    )
-    if (section.description) {
-      parts.push(`Description: ${section.description}`)
-    }
-
-    switch (section.kind) {
-      case "intro": {
-        const s: any = section
-        parts.push(`Body: ${s.body}`)
-        const bp = s.bulletPoints as string[] | undefined
-        if (bp && bp.length) {
-          parts.push(
-            `Key points:\n${bp
-              .slice(0, 6)
-              .map((x) => `- ${x}`)
-              .join("\n")}`
-          )
-        }
-        break
-      }
-
-      case "roadmap": {
-        const s: any = section
-        const milestones = (s.milestones || []).slice(0, 10)
-        if (milestones.length) {
-          parts.push(
-            `Milestones:\n${milestones
-              .map((m: string, i: number) => `${i + 1}. ${m}`)
-              .join("\n")}`
-          )
-        }
-        const phases = (s.phases || []).slice(0, 5)
-        for (const p of phases) {
-          parts.push(
-            `Phase: ${p.name}\n  Goal: ${p.goal}\n  Focus: ${(p.focus || [])
-              .slice(0, 6)
-              .join(", ")}`
-          )
-        }
-        break
-      }
-
-      case "today": {
-        const s: any = section
-        const items = (s.items || []).slice(0, 8)
-        parts.push(
-          `Today tasks:\n${items
-            .map(
-              (it: any) =>
-                `- ${it.label} (minutes: ${it.minutes ?? "?"}, xp: ${
-                  it.xp ?? "?"
-                })`
-            )
-            .join("\n")}`
-        )
-        break
-      }
-
-      case "checklist": {
-        const s: any = section
-        const items = (s.items || []).slice(0, 10)
-        parts.push(
-          `Checklist items:\n${items
-            .map(
-              (it: any) =>
-                `- ${it.label} (minutes: ${it.minutes ?? "?"}, xp: ${
-                  it.xp ?? "?"
-                })`
-            )
-            .join("\n")}`
-        )
-        break
-      }
-
-      case "weekly": {
-        const s: any = section
-        const weeks = (s.weeks || []).slice(0, 6)
-        for (const w of weeks) {
-          parts.push(
-            `Week ${w.week}: focus=${w.focus}; goal=${w.goal}; practice=${(
-              w.practice || []
-            )
-              .slice(0, 6)
-              .join(", ")}`
-          )
-        }
-        break
-      }
-
-      case "resources": {
-        const s: any = section
-        const resources = (s.resources || []).slice(0, 8)
-        parts.push(
-          `Resources (title – type – note):\n${resources
-            .map((r: any) => `- ${r.title} – ${r.type} – ${r.note ?? ""}`)
-            .join("\n")}`
-        )
-        break
-      }
-
-      case "gear": {
-        const s: any = section
-        parts.push(`Starter gear: ${(s.starter || []).slice(0, 6).join(", ")}`)
-        parts.push(
-          `Nice to have: ${(s.niceToHave || []).slice(0, 6).join(", ")}`
-        )
-        parts.push(
-          `Money saving tips: ${(s.moneySavingTips || [])
-            .slice(0, 6)
-            .join(", ")}`
-        )
-        break
-      }
-
-      case "tips": {
-        const s: any = section
-        const mistakes = (s.mistakes || []).slice(0, 8)
-        parts.push(
-          `Common mistakes:\n${mistakes
-            .map((m: any) => `- ${m.mistake} | Fix: ${m.fix}`)
-            .join("\n")}`
-        )
-        break
-      }
-
-      case "advanced": {
-        const s: any = section
-        parts.push(
-          `Advanced directions: ${(s.directions || []).slice(0, 6).join(", ")}`
-        )
-        parts.push(
-          `Long term goals: ${(s.longTermGoals || []).slice(0, 6).join(", ")}`
-        )
-        break
-      }
-
-      default:
-        break
-    }
-  }
-
-  return parts.join("\n")
+function buildCourseSummary(plan: HobbyPlan): string {
+  return [
+    "=== Course overview ===",
+    `Hobby: ${plan.hobby}`,
+    `Level: ${plan.level}`,
+    `Modules: ${plan.modules.length}`,
+  ].join("\n")
 }
 
 /**
- * Lessons summary for context
+ * Selected modules summary for context
  */
-function buildLessonsSummary(lessons: Lesson[]): string {
-  if (!lessons.length) return ""
+function buildModulesSummary(plan: HobbyPlan, selectedModuleIds: string[]): string {
+  const selectedModules = plan.modules.filter((module) =>
+    selectedModuleIds.includes(module.id)
+  )
+  if (!selectedModules.length) return "=== Selected modules ===\n(none found)"
 
   const parts: string[] = []
-
-  lessons.forEach((lesson, index) => {
+  selectedModules.forEach((module) => {
     parts.push(
-      `\n=== Lesson ${index + 1}: ${lesson.kind.toUpperCase()} – ${
-        lesson.title
-      } ===`
+      `\n=== Module: ${module.type.toUpperCase()} - ${module.title} ===`
     )
-    parts.push(`Topic: ${lesson.topic}`)
-    parts.push(`Summary: ${lesson.summary}`)
-    parts.push(`Estimated time: ${lesson.estimatedTimeMinutes} min`)
+    parts.push(`Summary: ${module.summary}`)
+    parts.push(`Estimated: ${module.estimatedMinutes} min | XP: ${module.xp}`)
 
-    if (lesson.sections && lesson.sections.length) {
-      const secs = lesson.sections.slice(0, 5)
-      for (const s of secs) {
+    if (module.type === "read") {
+      const content = (module.content || []).slice(0, 6)
+      if (content.length) {
         parts.push(
-          `Section: ${s.heading}\n  Body: ${s.body}\n  Tips: ${(s.tips || [])
-            .slice(0, 4)
-            .join(", ")}\n  Examples: ${(s.examples || [])
-            .slice(0, 4)
-            .join(", ")}`
+          `Content:\n${content.map((x: string) => `- ${x}`).join("\n")}`
         )
+      }
+
+      const takeaways = (module.keyTakeaways || []).slice(0, 4)
+      if (takeaways.length) {
+        parts.push(`Key takeaways: ${takeaways.join(", ")}`)
       }
     }
 
-    if (lesson.practiceIdeas && lesson.practiceIdeas.length) {
-      parts.push(
-        `Practice ideas: ${lesson.practiceIdeas.slice(0, 6).join(" | ")}`
-      )
+    if (module.type === "quiz") {
+      parts.push(`Prompt: ${module.prompt}`)
+      const questions = (module.questions || []).slice(0, 3)
+      for (const q of questions) {
+        parts.push(
+          `Quiz Q: ${q.question}\n  Options: ${(q.options || [])
+            .slice(0, 4)
+            .join(", ")}\n  Correct answer: ${
+            q.options?.[q.answerIndex] ?? ""
+          }\n  Explanation: ${q.explanation}`
+        )
+      }
     }
   })
 
@@ -404,7 +409,47 @@ function buildLessonsSummary(lessons: Lesson[]): string {
 }
 
 /**
- * Q&A history summary so user can "continue" previous questions
+ * Selected deep-dives summary for context
+ */
+function buildSelectedDeepDivesSummary(
+  lessons: Lesson[],
+  selectedIndexes: number[]
+): string {
+  const selected = selectedIndexes
+    .map((index) => ({ lesson: lessons[index], index }))
+    .filter((item) => !!item.lesson)
+
+  if (!selected.length) return "=== Selected deep dives ===\n(none found)"
+
+  const parts: string[] = []
+  selected.forEach(({ lesson, index }) => {
+    parts.push(
+      `\n=== Deep dive ${index + 1}: ${lesson!.title} ===`
+    )
+    parts.push(`Topic: ${lesson!.topic}`)
+    parts.push(`Summary: ${lesson!.summary}`)
+    parts.push(`Estimated time: ${lesson!.estimatedTimeMinutes} min`)
+
+    if (lesson!.sections?.length) {
+      lesson!.sections.slice(0, 5).forEach((section) => {
+        parts.push(
+          `Section: ${section.heading}\n  Body: ${section.body}\n  Tips: ${(
+            section.tips || []
+          )
+            .slice(0, 4)
+            .join(", ")}\n  Examples: ${(section.examples || [])
+            .slice(0, 4)
+            .join(", ")}`
+        )
+      })
+    }
+  })
+
+  return parts.join("\n")
+}
+
+/**
+ * Q&A history summary so user can continue previous questions
  */
 function buildHistorySummary(history: HistoryItem[]): string {
   if (!history.length) return ""

@@ -1,10 +1,8 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
 import { HobbyPlan, Lesson } from "../types"
 import { QAItem } from "../AskQuestionPanel"
-
-const LS_SESSIONS_KEY = "hobbyasap_sessions_v1"
+import { useAppData } from "../AppDataProvider"
 
 export interface StreakState {
   current: number
@@ -18,6 +16,14 @@ export const INITIAL_STREAK: StreakState = {
   lastActiveDate: null,
 }
 
+export interface ChatThread {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  questions: QAItem[]
+}
+
 export interface SavedSession {
   id: string
   createdAt: string
@@ -25,76 +31,18 @@ export interface SavedSession {
   level: string
   icon: string | null
   plan: HobbyPlan
+  sectionsGenerated?: number
+  sectionModuleCounts?: number[]
   completedTaskIds: string[]
   streak: StreakState
   lessons: Lesson[]
+  chatThreads?: ChatThread[]
+  activeChatId?: string | null
+  // Legacy mirror for compatibility with existing UI/code paths.
   questions: QAItem[]
 }
 
 export function useSessionsHistory() {
-  const [history, setHistory] = useState<SavedSession[]>([])
-
-  // Load from localStorage once
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      const raw = localStorage.getItem(LS_SESSIONS_KEY)
-      if (raw) {
-        setHistory(JSON.parse(raw))
-      }
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  const persist = useCallback((next: SavedSession[]) => {
-    setHistory(next)
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(LS_SESSIONS_KEY, JSON.stringify(next))
-      }
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  const saveSnapshot = useCallback((snapshot: SavedSession) => {
-    setHistory((prev) => {
-      const updated = [
-        snapshot,
-        ...prev.filter((s) => s.id !== snapshot.id),
-      ].slice(0, 20)
-      try {
-        if (typeof window !== "undefined") {
-          localStorage.setItem(LS_SESSIONS_KEY, JSON.stringify(updated))
-        }
-      } catch {
-        // ignore
-      }
-      return updated
-    })
-  }, [])
-
-  const deleteSession = useCallback((id: string) => {
-    setHistory((prev) => {
-      const updated = prev.filter((s) => s.id !== id)
-      try {
-        if (typeof window !== "undefined") {
-          localStorage.setItem(LS_SESSIONS_KEY, JSON.stringify(updated))
-        }
-      } catch {
-        // ignore
-      }
-      return updated
-    })
-  }, [])
-
-  const clearAllSessions = useCallback(() => {
-    persist([])
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(LS_SESSIONS_KEY)
-    }
-  }, [persist])
-
+  const { history, saveSnapshot, deleteSession, clearAllSessions } = useAppData()
   return { history, saveSnapshot, deleteSession, clearAllSessions }
 }

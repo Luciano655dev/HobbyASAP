@@ -81,12 +81,12 @@ export default function HobbiesGrid() {
           <h2 className="text-xl font-semibold sm:text-2xl">
             Choose your next hobby quest
           </h2>
-          <p className="mt-1 text-sm text-slate-200">
+          <p className="mt-1 text-sm text-muted">
             These are just ideas. HobbyASAP works with almost anything you can
             describe.
           </p>
         </div>
-        <p className="text-[11px] text-slate-400">
+        <p className="text-[11px] text-muted">
           Plans are generated when you ask. Nothing is pre recorded.
         </p>
       </div>
@@ -98,21 +98,21 @@ export default function HobbiesGrid() {
         {CARDS.map((card) => (
           <motion.div
             key={card.title}
-            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80 p-3 transition hover:-translate-y-1 hover:border-lime-300/80 hover:shadow-lg hover:shadow-lime-300/30"
+            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-border bg-surface/80 p-3 transition hover:-translate-y-1 hover:border-accent/60 hover:shadow-lg hover:shadow-accent/20"
             onClick={() => router.replace("/app")}
             variants={cardVariants}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <div className="absolute right-2 top-2 rounded-full bg-slate-950/80 px-2 py-[2px] text-[9px] text-lime-200 opacity-0 transition group-hover:opacity-100">
+            <div className="absolute right-2 top-2 rounded-full bg-surface/80 px-2 py-[2px] text-[9px] text-accent opacity-0 transition group-hover:opacity-100">
               New quest
             </div>
             <div className="mb-1 text-2xl">{card.icon}</div>
-            <p className="text-sm font-semibold text-slate-50">{card.title}</p>
-            <p className="mt-1 text-[11px] text-slate-400">{card.text}</p>
-            <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400">
+            <p className="text-sm font-semibold text-text">{card.title}</p>
+            <p className="mt-1 text-[11px] text-muted">{card.text}</p>
+            <div className="mt-3 flex items-center justify-between text-[10px] text-muted">
               <span>Auto roadmap</span>
-              <span className="rounded-full bg-lime-300/15 px-2 py-[2px] text-lime-200">
+              <span className="rounded-full bg-accent/15 px-2 py-[2px] text-accent">
                 10 to 20 quests
               </span>
             </div>

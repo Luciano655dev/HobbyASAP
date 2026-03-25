@@ -1,0 +1,24 @@
+project_id = "hobbyasap"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.migrations]
+enabled = true
+schema_paths = ["./schema.sql"]
+
+[db.seed]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
