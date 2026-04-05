@@ -43,18 +43,27 @@ export async function checkRateLimit(params: {
   const identityKey = getIdentityKey(request, userId)
   const key = `ratelimit:${namespace}:${identityKey}`
 
-  const current = await redis.incr(key)
-  if (current === 1) {
-    await redis.expire(key, windowSeconds)
-  }
+  try {
+    const current = await redis.incr(key)
+    if (current === 1) {
+      await redis.expire(key, windowSeconds)
+    }
 
-  const ttl = await redis.ttl(key)
-  const retryAfterSeconds = ttl > 0 ? ttl : windowSeconds
-  const remaining = Math.max(0, limit - current)
+    const ttl = await redis.ttl(key)
+    const retryAfterSeconds = ttl > 0 ? ttl : windowSeconds
+    const remaining = Math.max(0, limit - current)
 
-  return {
-    allowed: current <= limit,
-    remaining,
-    retryAfterSeconds,
+    return {
+      allowed: current <= limit,
+      remaining,
+      retryAfterSeconds,
+    }
+  } catch (error) {
+    console.error("Rate limit Redis unavailable:", error)
+    return {
+      allowed: true,
+      remaining: limit,
+      retryAfterSeconds: 0,
+    }
   }
 }

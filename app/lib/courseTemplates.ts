@@ -1,8 +1,9 @@
 import "server-only"
 
-import Groq from "groq-sdk"
+import OpenAI from "openai"
 import getUserPrompt from "@/app/api/generate/userPrompt"
 import getSystemPrompt from "@/app/api/getSystemPrompt"
+import { coursePlanResponseFormat } from "@/app/api/generate/coursePlanResponseFormat"
 import type { HobbyPlan, Module } from "@/app/api/generate/types"
 import {
   addGlobalTokens,
@@ -24,9 +25,11 @@ export type CourseTemplateRecord = {
   section_module_counts: number[]
 }
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 })
+
+const COURSE_MODEL = process.env.OPENAI_COURSE_MODEL || "gpt-5.4-mini"
 
 export function normalizeCourseHobby(value: string) {
   return value
@@ -64,18 +67,28 @@ export async function generateCourseSection(params: {
     existingModules,
   })
 
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.1-8b-instant",
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("Missing OPENAI_API_KEY for course generation.")
+  }
+
+  const completion = await openai.chat.completions.create({
+    model: COURSE_MODEL,
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "developer", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
     temperature: 0,
-    max_tokens: 2800,
+    max_completion_tokens: 2800,
+    response_format: coursePlanResponseFormat,
   })
 
   const usage = (completion as { usage?: { total_tokens?: number } }).usage
   await addGlobalTokens(budget.redis, budget.key, usage?.total_tokens ?? 0)
+
+  const refusal = completion.choices?.[0]?.message?.refusal
+  if (refusal) {
+    throw new Error(`OpenAI refused course generation: ${refusal}`)
+  }
 
   let raw = completion.choices?.[0]?.message?.content || ""
   raw = raw.trim()

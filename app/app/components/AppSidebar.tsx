@@ -59,90 +59,92 @@ export default function AppSidebar() {
 
   return (
     <>
-      <aside className="hidden w-80 shrink-0 border-r border-border bg-surface/80 md:flex md:flex-col">
-        <div className="border-b border-border px-5 py-5">
-          <p className="text-[11px] uppercase tracking-wide text-muted">Workspace</p>
-          <div className="mt-2">
-            <div>
-              <h2 className="text-lg font-semibold text-text">Your courses</h2>
-              <p className="text-xs text-muted">
-                {history.length} saved {history.length === 1 ? "course" : "courses"}
-              </p>
+      <aside className="hidden w-80 shrink-0 border-r border-border bg-surface/80 md:sticky md:top-0 md:flex md:h-screen md:flex-col">
+        <div className="flex h-full flex-col">
+          <div className="border-b border-border px-5 py-5">
+            <p className="text-[11px] uppercase tracking-wide text-muted">Workspace</p>
+            <div className="mt-2">
+              <div>
+                <h2 className="text-lg font-semibold text-text">Your courses</h2>
+                <p className="text-xs text-muted">
+                  {history.length} saved {history.length === 1 ? "course" : "courses"}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="px-3 pt-3">
-          <Link
-            href="/app/courses/new"
-            className="flex items-center justify-center gap-2 rounded-2xl bg-accent-strong px-4 py-3 text-sm font-semibold text-white hover:bg-accent"
-          >
-            <PlusCircle className="h-4 w-4" />
-            <span>New Course</span>
-          </Link>
-        </div>
+          <div className="px-3 pt-3">
+            <Link
+              href="/app/courses/new"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-accent-strong px-4 py-3 text-sm font-semibold text-white hover:bg-accent"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>New Course</span>
+            </Link>
+          </div>
 
-        <div className="px-3 pb-3 pt-3">
-          <Link
-            href={currentCourseHref}
-            className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 transition ${
-              pathname === "/app/learn"
-                ? "border-accent/40 bg-accent-soft"
-                : "border-border bg-surface hover:border-accent/30 hover:bg-surface-2"
-            }`}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-2 text-base">
-              {currentSession?.icon ?? "⭐"}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-text">
-                {currentSession?.hobby ?? "No active course"}
-              </p>
-              <p className="text-[10px] text-muted">
-                {currentSession
-                  ? `${completedModules}/${currentSession.plan.modules.length} • ${currentProgress}%`
-                  : "Create a course to start"}
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted" />
-          </Link>
-        </div>
+          <div className="px-3 pb-3 pt-3">
+            <Link
+              href={currentCourseHref}
+              className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 transition ${
+                pathname === "/app/learn"
+                  ? "border-accent/40 bg-accent-soft"
+                  : "border-border bg-surface hover:border-accent/30 hover:bg-surface-2"
+              }`}
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-2 text-base">
+                {currentSession?.icon ?? "⭐"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-text">
+                  {currentSession?.hobby ?? "No active course"}
+                </p>
+                <p className="text-[10px] text-muted">
+                  {currentSession
+                    ? `${completedModules}/${currentSession.plan.modules.length} • ${currentProgress}%`
+                    : "Create a course to start"}
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted" />
+            </Link>
+          </div>
 
-        <nav className="flex-1 space-y-1 px-2 pb-4">
-          {([
-            {
-              href: currentCourseHref,
-              label: "Learn",
-              icon: BookOpen,
-              active: pathname === "/app/learn",
-            },
-            ...navItems.map((item) => ({
-              ...item,
-              active: isActivePath(pathname, item.href),
-            })),
-          ] as Array<SidebarNavItem & { active: boolean }>).map((item) => {
-            const Icon = item.icon
-            return (
-              <Link
-                key={`${item.href}-${item.label}`}
-                href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
-                  item.active
-                    ? "bg-accent-soft text-accent"
-                    : "text-muted hover:bg-surface-2 hover:text-text"
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="font-medium">{item.label}</span>
-                <ChevronRight
-                  className={`ml-auto h-4 w-4 transition ${
-                    item.active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          <nav className="flex-1 space-y-1 px-2 pb-4">
+            {([
+              {
+                href: currentCourseHref,
+                label: "Learn",
+                icon: BookOpen,
+                active: pathname === "/app/learn",
+              },
+              ...navItems.map((item) => ({
+                ...item,
+                active: isActivePath(pathname, item.href),
+              })),
+            ] as Array<SidebarNavItem & { active: boolean }>).map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={`${item.href}-${item.label}`}
+                  href={item.href}
+                  className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
+                    item.active
+                      ? "bg-accent-soft text-accent"
+                      : "text-muted hover:bg-surface-2 hover:text-text"
                   }`}
-                />
-              </Link>
-            )
-          })}
-        </nav>
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="font-medium">{item.label}</span>
+                  <ChevronRight
+                    className={`ml-auto h-4 w-4 transition ${
+                      item.active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  />
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pt-2 [padding-bottom:max(env(safe-area-inset-bottom),0.5rem)] md:hidden">

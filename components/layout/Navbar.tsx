@@ -17,7 +17,7 @@ export default function Navbar() {
       </div>
 
       <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-app-bg/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <Link href="/" className="flex items-center gap-2 transition hover:opacity-90">
             <div
               aria-hidden="true"

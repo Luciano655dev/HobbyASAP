@@ -1,7 +1,7 @@
 // app/api/lesson/route.ts
 import { NextResponse } from "next/server"
 import { Lesson } from "../generate/types"
-import Groq from "groq-sdk"
+import OpenAI from "openai"
 import getLessonPrompt, { LessonModuleContext } from "./lessonPrompt"
 import getSystemPrompt from "../getSystemPrompt"
 import {
@@ -18,9 +18,11 @@ import {
 import { logError, logInfo, logWarn } from "@/app/lib/logger"
 import { checkRateLimit } from "@/app/lib/rateLimit"
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 })
+
+const DEEP_DIVE_MODEL = process.env.OPENAI_DEEP_DIVE_MODEL || "gpt-5.4-nano"
 
 export async function POST(req: Request) {
   const requestId = crypto.randomUUID()
@@ -150,14 +152,21 @@ export async function POST(req: Request) {
       moduleContext: normalizedModuleContext,
     })
 
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "Missing OPENAI_API_KEY for deep dives." },
+        { status: 500 }
+      )
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: DEEP_DIVE_MODEL,
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "developer", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.1,
-      max_tokens: 3600,
+      max_completion_tokens: 3600,
     })
 
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
@@ -223,7 +232,7 @@ export async function POST(req: Request) {
 
     if (needsQuizRepair) {
       const repaired = await repairQuizLesson({
-        groq,
+        openai,
         systemPrompt,
         hobby,
         level: userLevel,
@@ -329,7 +338,7 @@ function isQuizLessonDetailedEnough(
 }
 
 async function repairQuizLesson(params: {
-  groq: Groq
+  openai: OpenAI
   systemPrompt: string
   hobby: string
   level: string
@@ -337,67 +346,37 @@ async function repairQuizLesson(params: {
   moduleContext: LessonModuleContext
   initialLesson: Lesson
 }) {
-  const { groq, systemPrompt, hobby, level, topic, moduleContext, initialLesson } =
+  const { openai, systemPrompt, hobby, level, topic, moduleContext, initialLesson } =
     params
 
   const repairPrompt = `
-You must repair an in-depth quiz explanation JSON.
-Return JSON only and keep this shape:
-{
-  "kind": "inDepth",
-  "title": "string",
-  "topic": "string",
-  "goal": "string",
-  "estimatedTimeMinutes": number,
-  "level": "string",
-  "hobby": "string",
-  "summary": "string",
-  "sections": [
-    {
-      "heading": "string",
-      "body": "string",
-      "tips": ["string"],
-      "examples": ["string"]
-    }
-  ],
-  "recommendedResources": [
-    {
-      "title": "string",
-      "type": "video|article|book|course|community|search",
-      "url": "string",
-      "note": "string"
-    }
-  ]
-}
+Repair this in-depth quiz lesson JSON.
+Return JSON only with the same top-level shape as the current JSON.
 
-Hard requirements:
+Requirements:
 - One section per quiz question, in order.
-- For each section:
-  1) state the exact correct answer,
-  2) explain reasoning path,
-  3) explain why EACH wrong option is wrong.
+- Each section must state the exact correct answer, explain the reasoning path, and explain why each wrong option is wrong.
 - Mention each wrong option text explicitly.
-- Keep explanations concrete and detailed, not generic.
+- Keep the result concrete and specific.
 
 Hobby: ${hobby}
 Level: ${level}
 Topic: ${topic}
-
 Quiz context:
 ${JSON.stringify(moduleContext, null, 2)}
 
-Current inadequate JSON:
+Current JSON to repair:
 ${JSON.stringify(initialLesson, null, 2)}
 `
 
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.1-8b-instant",
+  const completion = await openai.chat.completions.create({
+    model: DEEP_DIVE_MODEL,
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "developer", content: systemPrompt },
       { role: "user", content: repairPrompt },
     ],
     temperature: 0.0,
-    max_tokens: 3600,
+    max_completion_tokens: 3600,
   })
 
   let raw = completion.choices?.[0]?.message?.content || ""

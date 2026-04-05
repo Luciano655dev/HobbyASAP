@@ -2,7 +2,8 @@
 import { NextResponse } from "next/server"
 import { getRedis } from "@/app/lib/redis"
 import { HobbyPlan, Module } from "./types"
-import Groq from "groq-sdk"
+import OpenAI from "openai"
+import { coursePlanResponseFormat } from "./coursePlanResponseFormat"
 import getUserPrompt from "./userPrompt"
 import getSystemPrompt from "../getSystemPrompt"
 import {
@@ -13,9 +14,11 @@ import {
 import { requireAuthenticatedUser } from "@/app/lib/auth"
 import { checkRateLimit } from "@/app/lib/rateLimit"
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 })
+
+const COURSE_MODEL = process.env.OPENAI_COURSE_MODEL || "gpt-5.4-mini"
 
 export async function POST(req: Request) {
   try {
@@ -85,14 +88,22 @@ export async function POST(req: Request) {
       existingModules: safeExistingModules,
     })
 
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "Missing OPENAI_API_KEY for course generation." },
+        { status: 500 }
+      )
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: COURSE_MODEL,
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "developer", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.0,
-      max_tokens: 2800,
+      max_completion_tokens: 2800,
+      response_format: coursePlanResponseFormat,
     })
 
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
@@ -100,6 +111,14 @@ export async function POST(req: Request) {
     const usedTokens: number = usage?.total_tokens ?? 0
     if (budget.allowed) {
       await addGlobalTokens(budget.redis, budget.key, usedTokens)
+    }
+
+    const refusal = completion.choices?.[0]?.message?.refusal
+    if (refusal) {
+      return NextResponse.json(
+        { error: `OpenAI refused course generation: ${refusal}` },
+        { status: 500 }
+      )
     }
 
     let raw = completion.choices?.[0]?.message?.content || ""

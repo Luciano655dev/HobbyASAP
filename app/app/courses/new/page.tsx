@@ -2,7 +2,7 @@
 
 import type { Route } from "next"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { MAX_COURSES } from "../../constants"
 import { useAppData } from "../../AppDataProvider"
@@ -29,8 +29,29 @@ export default function NewCoursePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [loadingStepIndex, setLoadingStepIndex] = useState(0)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const hydrated = useHydrated()
   const courseCount = history.length
+
+  const courseSuggestions = useMemo(() => {
+    const normalizedInput = hobby.trim().toLowerCase()
+    const seen = new Set<string>()
+
+    return history
+      .filter((session) => {
+        const key = `${session.hobby.trim().toLowerCase()}::${session.level
+          .trim()
+          .toLowerCase()}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      .filter((session) => {
+        if (!normalizedInput) return true
+        return session.hobby.toLowerCase().includes(normalizedInput)
+      })
+      .slice(0, 6)
+  }, [history, hobby])
 
   useEffect(() => {
     setLanguage(preferredLanguage)
@@ -52,6 +73,13 @@ export default function NewCoursePage() {
       window.clearInterval(intervalId)
     }
   }, [loading])
+
+  function applySuggestion(hobbyValue: string, levelValue: string) {
+    setHobby(hobbyValue)
+    setLevel(levelValue)
+    setShowSuggestions(false)
+    setError("")
+  }
 
   async function handleStart(e: React.FormEvent) {
     e.preventDefault()
@@ -249,7 +277,7 @@ export default function NewCoursePage() {
         </div>
 
         <div className="mt-4 flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 space-y-1">
+          <div className="relative flex-1 space-y-1">
             <label htmlFor="course-hobby" className="text-[11px] font-semibold text-muted">
               Hobby
             </label>
@@ -258,10 +286,43 @@ export default function NewCoursePage() {
               type="text"
               value={hobby}
               disabled={!hydrated || loading}
-              onChange={(e) => setHobby(e.target.value)}
+              autoComplete="off"
+              onChange={(e) => {
+                setHobby(e.target.value)
+                setShowSuggestions(true)
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => {
+                window.setTimeout(() => setShowSuggestions(false), 120)
+              }}
               placeholder="Example: Fishing, Photography, Guitar, Coding..."
               className="mt-1 w-full rounded-xl px-3 py-2.5 bg-surface border border-border focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent text-sm text-text placeholder:text-muted"
             />
+            {showSuggestions && courseSuggestions.length > 0 ? (
+              <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-border bg-surface shadow-lg">
+                <p className="border-b border-border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                  Previous courses
+                </p>
+                <div className="p-1.5">
+                  {courseSuggestions.map((session) => (
+                    <button
+                      key={`${session.id}-${session.hobby}-${session.level}`}
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault()
+                        applySuggestion(session.hobby, session.level)
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition hover:bg-surface-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-text">{session.hobby}</p>
+                        <p className="text-xs text-muted">{session.level}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
           <div className="w-full sm:w-56 space-y-1">
             <label htmlFor="course-level" className="text-[11px] font-semibold text-muted">

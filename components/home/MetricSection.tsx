@@ -58,9 +58,6 @@ export default function MetricsSection() {
           <>
             {/* USERS CARD */}
             <div className="relative overflow-hidden rounded-3xl border border-border bg-surface/80 p-4 sm:p-5 shadow-sm shadow-accent/5">
-              {/* subtle gradient edge */}
-              <div className="pointer-events-none absolute inset-px rounded-[22px] border border-accent/20" />
-
               <div className="relative flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/20 text-accent text-lg">
                   🧑‍🚀
@@ -81,9 +78,6 @@ export default function MetricsSection() {
 
             {/* PROMPTS CARD */}
             <div className="relative overflow-hidden rounded-3xl border border-border bg-surface/80 p-4 sm:p-5 shadow-sm shadow-accent/5">
-              {/* subtle gradient edge */}
-              <div className="pointer-events-none absolute inset-px rounded-[22px] border border-accent/25" />
-
               <div className="relative flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/20 text-accent text-lg">
                   🪄

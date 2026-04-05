@@ -1,6 +1,6 @@
 // app/api/ask/route.ts
 import { NextResponse } from "next/server"
-import Groq from "groq-sdk"
+import OpenAI from "openai"
 import type { HobbyPlan, Lesson } from "../generate/types"
 import {
   checkGlobalTokenBudget,
@@ -10,9 +10,11 @@ import { requireAuthenticatedUser } from "@/app/lib/auth"
 import { logError, logInfo } from "@/app/lib/logger"
 import { checkRateLimit } from "@/app/lib/rateLimit"
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 })
+
+const AI_CHAT_MODEL = process.env.OPENAI_AI_CHAT_MODEL || "gpt-5.4-nano"
 
 interface HistoryItem {
   question: string
@@ -102,14 +104,14 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!process.env.GROQ_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       logError({
-        event: "ask_route_missing_groq_api_key",
+        event: "ask_route_missing_openai_api_key",
         requestId,
         route: "/api/ask",
       })
       return NextResponse.json(
-        { error: "Server misconfiguration: missing GROQ_API_KEY." },
+        { error: "Server misconfiguration: missing OPENAI_API_KEY." },
         { status: 500 }
       )
     }
@@ -187,14 +189,13 @@ export async function POST(req: Request) {
       )
     }
 
-    // We force JSON output with answer + tasks + inDepthTopic
     const systemPrompt =
-      "You are HobbyASAP Coach, an expert hobby mentor.\n" +
-      "- You answer questions using ONLY the selected context provided by the user.\n" +
-      "- Explain in clear, simple language and give concrete, actionable steps.\n" +
-      "- You are allowed to add extra tiny practice tasks when useful, but it is optional.\n" +
-      "- If user seems to want more depth on a specific topic, you may suggest an inDepthTopic.\n\n" +
-      "You MUST respond with VALID JSON ONLY (no markdown, no prose around it) in this exact shape:\n" +
+      "You are HobbyASAP Coach.\n" +
+      "Answer using only the selected context.\n" +
+      "Be clear, practical, and concise.\n" +
+      "Suggest small practice tasks only when they add value.\n" +
+      "Suggest inDepthTopic only when deeper study would help.\n" +
+      "Return valid JSON only in this exact shape:\n" +
       `{
   "answer": "string with your full explanation in natural language",
   "tasks": [
@@ -206,25 +207,23 @@ export async function POST(req: Request) {
   ],
   "inDepthTopic": "short topic string or null if not needed"
 }\n` +
-      "- tasks can be an empty array.\n" +
-      "- inDepthTopic can be null.\n" +
-      "- Do NOT add any extra top-level keys.\n"
+      "tasks may be []. inDepthTopic may be null. No extra top-level keys.\n"
 
     const userPrompt =
-      `User-selected context:\n\n` +
+      `Context:\n\n` +
       `${contextBlocks.join("\n\n")}\n\n` +
-      `Now answer this NEW question based ONLY on the selected context above:\n` +
+      `Answer this question using only that context:\n` +
       `Q: ${question.trim()}\n\n` +
-      `Remember to return valid JSON with fields: answer, tasks, inDepthTopic.`
+      `Return JSON with answer, tasks, inDepthTopic.`
 
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+    const completion = await openai.chat.completions.create({
+      model: AI_CHAT_MODEL,
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "developer", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.3,
-      max_tokens: 800,
+      max_completion_tokens: 800,
     })
 
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
@@ -377,14 +376,12 @@ function buildModulesSummary(plan: HobbyPlan, selectedModuleIds: string[]): stri
     parts.push(`Estimated: ${module.estimatedMinutes} min | XP: ${module.xp}`)
 
     if (module.type === "read") {
-      const content = (module.content || []).slice(0, 6)
+      const content = (module.content || []).slice(0, 4)
       if (content.length) {
-        parts.push(
-          `Content:\n${content.map((x: string) => `- ${x}`).join("\n")}`
-        )
+        parts.push(`Content: ${content.join(" | ")}`)
       }
 
-      const takeaways = (module.keyTakeaways || []).slice(0, 4)
+      const takeaways = (module.keyTakeaways || []).slice(0, 3)
       if (takeaways.length) {
         parts.push(`Key takeaways: ${takeaways.join(", ")}`)
       }
@@ -392,14 +389,14 @@ function buildModulesSummary(plan: HobbyPlan, selectedModuleIds: string[]): stri
 
     if (module.type === "quiz") {
       parts.push(`Prompt: ${module.prompt}`)
-      const questions = (module.questions || []).slice(0, 3)
+      const questions = (module.questions || []).slice(0, 2)
       for (const q of questions) {
         parts.push(
-          `Quiz Q: ${q.question}\n  Options: ${(q.options || [])
+          `Quiz Q: ${q.question}\nOptions: ${(q.options || [])
             .slice(0, 4)
-            .join(", ")}\n  Correct answer: ${
+            .join(", ")}\nCorrect: ${
             q.options?.[q.answerIndex] ?? ""
-          }\n  Explanation: ${q.explanation}`
+          }\nWhy: ${q.explanation}`
         )
       }
     }
@@ -431,14 +428,14 @@ function buildSelectedDeepDivesSummary(
     parts.push(`Estimated time: ${lesson!.estimatedTimeMinutes} min`)
 
     if (lesson!.sections?.length) {
-      lesson!.sections.slice(0, 5).forEach((section) => {
+      lesson!.sections.slice(0, 3).forEach((section) => {
         parts.push(
-          `Section: ${section.heading}\n  Body: ${section.body}\n  Tips: ${(
+          `Section: ${section.heading}\nBody: ${section.body}\nTips: ${(
             section.tips || []
           )
-            .slice(0, 4)
-            .join(", ")}\n  Examples: ${(section.examples || [])
-            .slice(0, 4)
+            .slice(0, 2)
+            .join(", ")}\nExamples: ${(section.examples || [])
+            .slice(0, 2)
             .join(", ")}`
         )
       })
@@ -457,7 +454,7 @@ function buildHistorySummary(history: HistoryItem[]): string {
   return history
     .map(
       (item, idx) =>
-        `Q${idx + 1}: ${item.question}\nA${idx + 1}: ${item.answer}`
+        `Q${idx + 1}: ${item.question}\nA${idx + 1}: ${item.answer.slice(0, 280)}`
     )
     .join("\n\n")
 }
