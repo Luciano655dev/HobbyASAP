@@ -14,7 +14,7 @@ export default function RootChrome({
 
   return (
     <>
-      <Navbar />
+      {!isAppRoute ? <Navbar /> : null}
       <main>{children}</main>
       {!isAppRoute ? <Footer /> : null}
     </>

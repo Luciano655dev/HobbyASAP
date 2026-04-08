@@ -1,40 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
-
-interface Metrics {
-  prompts: number
-  users: number
-}
+import { useMetrics } from "@/hooks/useMetrics"
 
 export default function MetricsSection() {
-  const [metrics, setMetrics] = useState<Metrics | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function fetchMetrics() {
-      try {
-        const res = await fetch("/api/metrics")
-        if (!res.ok) throw new Error("Failed to load metrics")
-        const data = (await res.json()) as Metrics
-
-        if (!cancelled) setMetrics(data)
-      } catch (err: any) {
-        if (!cancelled) setError(err.message || "Failed to load metrics")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    fetchMetrics()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { metrics, loading, error } = useMetrics()
 
   return (
     <section className="mx-auto max-w-6xl px-4 pb-10 pt-4">
@@ -76,7 +45,7 @@ export default function MetricsSection() {
               </div>
             </div>
 
-            {/* PROMPTS CARD */}
+            {/* MODULES CARD */}
             <div className="relative overflow-hidden rounded-3xl border border-border bg-surface/80 p-4 sm:p-5 shadow-sm shadow-accent/5">
               <div className="relative flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/20 text-accent text-lg">
@@ -84,13 +53,13 @@ export default function MetricsSection() {
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-accent/80">
-                    Plans
+                    Lessons
                   </span>
                   <span className="text-lg sm:text-xl font-semibold text-text">
-                    {metrics.prompts.toLocaleString()}
+                    {metrics.lessons.toLocaleString()}
                   </span>
                   <span className="text-[11px] text-muted">
-                    AI plans generated
+                    course modules created
                   </span>
                 </div>
               </div>

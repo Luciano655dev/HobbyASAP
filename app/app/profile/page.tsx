@@ -8,6 +8,7 @@ import { useGlobalXpStats } from "../hooks/useXpStats"
 import { useAppData } from "../AppDataProvider"
 import { useAuth } from "@/components/auth/AuthProvider"
 import { getSupabaseBrowserClient } from "@/app/lib/supabase/client"
+import ThemeToggle from "@/components/layout/ThemeToggle"
 
 function getSessionChatCount(session: {
   chatThreads?: { questions: { id: string }[] }[]
@@ -361,6 +362,15 @@ export default function ProfilePage() {
             <p className="mt-2 text-xs text-muted">
               Manage your sign-in access and keep your saved courses tied to this account.
             </p>
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-surface-2 px-3 py-3">
+              <ThemeToggle />
+              <div>
+                <p className="text-sm font-semibold text-text">Theme</p>
+                <p className="text-xs text-muted">
+                  Switch between light and dark mode for the app.
+                </p>
+              </div>
+            </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link

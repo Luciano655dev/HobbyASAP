@@ -1,6 +1,5 @@
 // app/api/generate/route.ts
 import { NextResponse } from "next/server"
-import { getRedis } from "@/app/lib/redis"
 import { HobbyPlan, Module } from "./types"
 import OpenAI from "openai"
 import { coursePlanResponseFormat } from "./coursePlanResponseFormat"
@@ -13,6 +12,7 @@ import {
 } from "@/app/lib/groqGlobalLimit"
 import { requireAuthenticatedUser } from "@/app/lib/auth"
 import { checkRateLimit } from "@/app/lib/rateLimit"
+import { logSiteMetricEvent } from "@/app/lib/siteMetrics"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -171,14 +171,19 @@ export async function POST(req: Request) {
       }))
     }
 
-    // keep your simple metrics
     try {
-      const redis = getRedis()
-      if (redis) {
-        await redis.incr("metrics:prompts")
-      }
+      await logSiteMetricEvent({
+        metricKey: "prompt",
+        metadata: {
+          source: "legacy_generate_route",
+          hobby,
+          level: userLevel,
+          language: lang,
+          existingModules: safeExistingModules.length,
+        },
+      })
     } catch (metricsErr) {
-      console.error("Failed to increment metrics:prompts", metricsErr)
+      console.error("Failed to log prompt metric", metricsErr)
     }
 
     return NextResponse.json({ plan })

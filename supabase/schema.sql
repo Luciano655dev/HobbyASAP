@@ -62,6 +62,14 @@ create table if not exists public.lesson_templates (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.site_metric_events (
+  id bigint generated always as identity primary key,
+  metric_key text not null check (metric_key in ('prompt', 'new_user')),
+  user_id uuid null references auth.users(id) on delete set null,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
 create index if not exists course_templates_lookup_idx
   on public.course_templates (normalized_hobby, level, language);
 
@@ -70,6 +78,13 @@ create index if not exists user_course_sessions_user_id_idx
 
 create index if not exists lesson_templates_cache_key_idx
   on public.lesson_templates (cache_key);
+
+create index if not exists site_metric_events_metric_key_created_at_idx
+  on public.site_metric_events (metric_key, created_at desc);
+
+create unique index if not exists site_metric_events_new_user_unique_idx
+  on public.site_metric_events (metric_key, user_id)
+  where metric_key = 'new_user' and user_id is not null;
 
 drop trigger if exists user_settings_set_updated_at on public.user_settings;
 create trigger user_settings_set_updated_at
@@ -99,6 +114,7 @@ alter table public.user_settings enable row level security;
 alter table public.course_templates enable row level security;
 alter table public.user_course_sessions enable row level security;
 alter table public.lesson_templates enable row level security;
+alter table public.site_metric_events enable row level security;
 
 drop policy if exists "Users can read own settings" on public.user_settings;
 create policy "Users can read own settings"

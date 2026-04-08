@@ -10,6 +10,7 @@ import {
   checkGlobalTokenBudget,
   type GlobalTokenBudget,
 } from "@/app/lib/groqGlobalLimit"
+import { logSiteMetricEvent } from "@/app/lib/siteMetrics"
 
 export type SupportedLanguage = "en" | "pt"
 
@@ -114,6 +115,17 @@ export async function generateCourseSection(params: {
       id: `module-${offset + index + 1}`,
     }))
   }
+
+  await logSiteMetricEvent({
+    metricKey: "prompt",
+    metadata: {
+      source: "course_templates",
+      hobby: normalizeCourseHobby(hobby),
+      level: normalizeCourseLevel(level),
+      language,
+      existingModules: existingModules.length,
+    },
+  })
 
   return plan
 }

@@ -51,7 +51,7 @@ export default function RegisterPage() {
       await fetch("/api/metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "newUser" }),
+        body: JSON.stringify({ type: "new_user", userId }),
       }).catch(() => null)
     }
 
