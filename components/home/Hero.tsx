@@ -1,135 +1,56 @@
-"use client"
-
 import Link from "next/link"
-import { motion, type Variants } from "framer-motion"
 import type React from "react"
-
-const container: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.7,
-      ease: [0.16, 1, 0.3, 1],
-    },
-  },
-}
-
-const rightCard: Variants = {
-  hidden: { opacity: 0, x: 40 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      duration: 0.7,
-      ease: [0.16, 1, 0.3, 1],
-      delay: 0.15,
-    },
-  },
-}
-
-const staggerList: Variants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.2,
-    },
-  },
-}
-
-const taskItem: Variants = {
-  hidden: { opacity: 0, x: 10 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.4, ease: "easeOut" },
-  },
-}
 
 export default function Hero() {
   return (
     <section className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 pb-14 pt-16 sm:pb-18 sm:pt-20 lg:flex-row lg:items-center">
-
-      {/* Left side */}
-      <motion.div
-        className="relative z-10 max-w-xl space-y-7"
-        initial="hidden"
-        animate="visible"
-        variants={container}
-      >
+      <div className="relative z-10 max-w-xl space-y-7">
         <div>
-          <motion.h1
-            className="text-4xl font-extrabold tracking-tight sm:text-5xl"
-            variants={container}
-          >
+          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
             Learn any hobby
             <span className="block bg-linear-to-r from-accent-strong via-accent to-accent bg-clip-text text-transparent">
               as fast and as easily as possible
             </span>
-          </motion.h1>
-          <motion.p
-            className="mt-3 text-sm text-muted sm:text-base"
-            variants={container}
-          >
+          </h1>
+          <p className="mt-3 text-sm text-muted sm:text-base">
             HobbyASAP gives you a roadmap, daily quests, streaks and deep dives
             for any hobby, from guitar to coding to fishing. No more “what now”
             feeling.
-          </motion.p>
+          </p>
         </div>
 
-        <motion.div
-          className="flex flex-wrap items-center gap-3"
-          variants={container}
-        >
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/app"
-            className="inline-flex items-center justify-center rounded-full bg-accent-strong px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent/40 hover:bg-accent"
+            className="inline-flex items-center justify-center rounded-full bg-accent-strong px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent/40 transition hover:bg-accent"
           >
             Start a hobby quest
             <span className="ml-1.5 text-lg">▶</span>
           </Link>
-          <button
-            type="button"
-            onClick={() => {
-              const el = document.getElementById("how-it-works")
-              if (el) el.scrollIntoView({ behavior: "smooth" })
-            }}
-            className="inline-flex items-center justify-center rounded-full border border-border bg-surface/70 px-4 py-2 text-xs font-medium text-text hover:border-accent/50 hover:text-accent"
+          <a
+            href="#how-it-works"
+            className="inline-flex items-center justify-center rounded-full border border-border bg-surface/70 px-4 py-2 text-xs font-medium text-text transition hover:border-accent/50 hover:text-accent"
           >
             See how it works
-          </button>
-        </motion.div>
+          </a>
+        </div>
 
-        <motion.div
-          className="flex flex-wrap items-center gap-4 text-[11px] text-muted"
-          variants={container}
-        >
+        <div className="flex flex-wrap items-center gap-4 text-[11px] text-muted">
           <span>🔥 Designed for streaks and XP</span>
           <span>🎯 15 to 30 minute sessions</span>
           <span>🔓 No account needed to test</span>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
-      {/* Right side - fake app card */}
-      <motion.div
-        className="relative z-10 mx-auto w-full max-w-md"
-        initial="hidden"
-        animate="visible"
-        variants={rightCard}
-      >
+      <div className="relative z-10 mx-auto w-full max-w-md">
         <div className="rounded-[26px] border border-border bg-surface/90 p-4 shadow-2xl shadow-accent/10">
-          {/* header */}
           <div className="mb-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-linear-to-br from-accent to-accent-strong text-lg text-white">
                 🎸
               </div>
               <div>
-                <p className="text-sm font-semibold text-text">
-                  Guitar quest
-                </p>
+                <p className="text-sm font-semibold text-text">Guitar quest</p>
                 <p className="text-[11px] text-accent">
                   Level 2 • Confident beginner
                 </p>
@@ -145,13 +66,7 @@ export default function Hero() {
           </div>
 
           <div className="space-y-3 text-xs">
-            {/* today card */}
-            <motion.div
-              className="rounded-2xl border border-accent/40 bg-accent-soft p-3"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.4, ease: "easeOut" }}
-            >
+            <div className="rounded-2xl border border-accent/40 bg-accent-soft p-3">
               <div className="mb-1 flex items-center justify-between">
                 <p className="text-[11px] font-semibold text-accent">
                   Today - 25 minute session
@@ -160,12 +75,7 @@ export default function Hero() {
                   Daily quests
                 </span>
               </div>
-              <motion.ul
-                className="space-y-1.5"
-                variants={staggerList}
-                initial="hidden"
-                animate="visible"
-              >
+              <ul className="space-y-1.5">
                 <HeroTask
                   done
                   label="Warmup: switch between 2 open chords for 3 min"
@@ -179,24 +89,16 @@ export default function Hero() {
                   label="Record yourself playing and note 1 thing to fix"
                   meta="5 min • +7 XP"
                 />
-              </motion.ul>
+              </ul>
               <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
                 <Chip>Deep dive: clean chord changes</Chip>
                 <Chip variant="ghost">In depth: rhythm feel tips</Chip>
               </div>
-            </motion.div>
+            </div>
 
-            {/* week + Q&A */}
-            <motion.div
-              className="grid gap-2 md:grid-cols-2"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.4, ease: "easeOut" }}
-            >
+            <div className="grid gap-2 md:grid-cols-2">
               <div className="rounded-2xl border border-border bg-surface-2/80 p-3">
-                <p className="text-[11px] font-semibold text-text">
-                  Week focus
-                </p>
+                <p className="text-[11px] font-semibold text-text">Week focus</p>
                 <p className="mt-1 text-[11px] text-muted">
                   Switch chords without stopping the strum.
                 </p>
@@ -218,19 +120,18 @@ export default function Hero() {
                   pressure. Only then add full strums.
                 </p>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.button
-              className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-linear-to-r from-accent to-accent-strong px-4 py-2 text-xs font-semibold text-white shadow-md shadow-accent/40 hover:brightness-110"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <button
+              type="button"
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-linear-to-r from-accent to-accent-strong px-4 py-2 text-xs font-semibold text-white shadow-md shadow-accent/40 transition hover:brightness-110"
             >
               Continue today session
               <span>▶</span>
-            </motion.button>
+            </button>
           </div>
         </div>
-      </motion.div>
+      </div>
     </section>
   )
 }
@@ -238,7 +139,7 @@ export default function Hero() {
 function HeroTask(props: { label: string; meta: string; done?: boolean }) {
   const { label, meta, done } = props
   return (
-    <motion.li className="flex items-start gap-2" variants={taskItem}>
+    <li className="flex items-start gap-2">
       <div
         className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-md border text-[9px] ${
           done
@@ -254,12 +155,8 @@ function HeroTask(props: { label: string; meta: string; done?: boolean }) {
         </p>
         <p className="text-[10px] text-muted">{meta}</p>
       </div>
-    </motion.li>
+    </li>
   )
-}
-
-function Badge({ children }: { children: React.ReactNode }) {
-  return <span className="">{children}</span>
 }
 
 function Chip({
@@ -276,6 +173,7 @@ function Chip({
       </span>
     )
   }
+
   return (
     <span className="rounded-full border border-accent/40 bg-surface/70 px-2 py-0.5 text-[10px] text-accent">
       {children}

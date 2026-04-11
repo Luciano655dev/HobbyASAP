@@ -1,7 +1,4 @@
-"use client"
-
-import { useRouter } from "next/navigation"
-import { motion, type Variants } from "framer-motion"
+import Link from "next/link"
 
 const CARDS = [
   {
@@ -26,56 +23,9 @@ const CARDS = [
   },
 ]
 
-// section fades in when it enters the viewport
-const sectionVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: [0.16, 1, 0.3, 1],
-    },
-  },
-}
-
-// grid staggers its children
-const gridVariants: Variants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
-    },
-  },
-}
-
-// each card pops in slightly
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 15, scale: 0.97 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      duration: 0.35,
-      ease: "easeOut",
-    },
-  },
-}
-
 export default function HobbiesGrid() {
-  const router = useRouter()
-
   return (
-    <motion.section
-      id="hobbies"
-      className="mx-auto max-w-6xl px-4 pb-14 sm:pb-18"
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.3 }} // <- only when user scrolls here
-      variants={sectionVariants}
-    >
+    <section id="hobbies" className="mx-auto max-w-6xl px-4 pb-14 sm:pb-18">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold sm:text-2xl">
@@ -91,18 +41,12 @@ export default function HobbiesGrid() {
         </p>
       </div>
 
-      <motion.div
-        className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4"
-        variants={gridVariants}
-      >
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {CARDS.map((card) => (
-          <motion.div
+          <Link
             key={card.title}
-            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-border bg-surface/80 p-3 transition hover:-translate-y-1 hover:border-accent/60 hover:shadow-lg hover:shadow-accent/20"
-            onClick={() => router.replace("/app")}
-            variants={cardVariants}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            href="/app"
+            className="group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-surface/80 p-3 transition hover:-translate-y-1 hover:border-accent/60 hover:shadow-lg hover:shadow-accent/20"
           >
             <div className="absolute right-2 top-2 rounded-full bg-surface/80 px-2 py-[2px] text-[9px] text-accent opacity-0 transition group-hover:opacity-100">
               New quest
@@ -116,9 +60,9 @@ export default function HobbiesGrid() {
                 10 to 20 quests
               </span>
             </div>
-          </motion.div>
+          </Link>
         ))}
-      </motion.div>
-    </motion.section>
+      </div>
+    </section>
   )
 }
