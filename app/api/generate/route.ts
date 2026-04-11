@@ -1,29 +1,62 @@
 // app/api/generate/route.ts
 import { NextResponse } from "next/server"
-import { getRedis } from "@/app/lib/redis"
-import { HobbyPlan } from "./types"
-import Groq from "groq-sdk"
+import { HobbyPlan, Module } from "./types"
+import OpenAI from "openai"
+import { coursePlanResponseFormat } from "./coursePlanResponseFormat"
 import getUserPrompt from "./userPrompt"
 import getSystemPrompt from "../getSystemPrompt"
 import {
   checkGlobalTokenBudget,
   addGlobalTokens,
+  type GlobalTokenBudget,
 } from "@/app/lib/groqGlobalLimit"
+import { requireAuthenticatedUser } from "@/app/lib/auth"
+import { checkRateLimit } from "@/app/lib/rateLimit"
+import { logSiteMetricEvent } from "@/app/lib/siteMetrics"
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 })
+
+const COURSE_MODEL = process.env.OPENAI_COURSE_MODEL || "gpt-5.4-mini"
 
 export async function POST(req: Request) {
   try {
-    const { hobby, level, language } = await req.json()
+    const auth = await requireAuthenticatedUser()
+    if (auth.response) {
+      return auth.response
+    }
+
+    const { hobby, level, language, existingModules } = await req.json()
 
     if (!hobby || typeof hobby !== "string") {
       return NextResponse.json({ error: "Hobby is required" }, { status: 400 })
     }
 
+    const rateLimit = await checkRateLimit({
+      request: req,
+      namespace: "generate:legacy",
+      limit: 8,
+      windowSeconds: 60 * 10,
+      userId: auth.user?.id,
+    })
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many generation requests. Please wait a few minutes.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
+        }
+      )
+    }
+
     // === GLOBAL TOKEN LIMIT CHECK ===
-    const budget: any = await checkGlobalTokenBudget()
+    const budget: GlobalTokenBudget = await checkGlobalTokenBudget()
     if (!budget.allowed) {
       return NextResponse.json(
         {
@@ -37,25 +70,56 @@ export async function POST(req: Request) {
     const userLevel =
       typeof level === "string" && level.trim() ? level : "complete beginner"
 
+    const safeExistingModules = Array.isArray(existingModules)
+      ? (existingModules as Module[]).filter(
+          (module) =>
+            module &&
+            typeof module.id === "string" &&
+            typeof module.title === "string" &&
+            typeof module.summary === "string" &&
+            (module.type === "read" || module.type === "quiz")
+        )
+      : []
+
     const lang = language === "pt" ? "pt" : "en"
     const systemPrompt = getSystemPrompt(lang)
 
-    const userPrompt = getUserPrompt(hobby, userLevel)
+    const userPrompt = getUserPrompt(hobby, userLevel, {
+      existingModules: safeExistingModules,
+    })
 
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "Missing OPENAI_API_KEY for course generation." },
+        { status: 500 }
+      )
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: COURSE_MODEL,
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "developer", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.0,
-      max_tokens: 2800,
+      max_completion_tokens: 2800,
+      response_format: coursePlanResponseFormat,
     })
 
     // === COUNT TOKENS & UPDATE GLOBAL USAGE ===
-    const usage = (completion as any).usage
+    const usage = (completion as { usage?: { total_tokens?: number } }).usage
     const usedTokens: number = usage?.total_tokens ?? 0
-    await addGlobalTokens(budget.redis, budget.key, usedTokens)
+    if (budget.allowed) {
+      await addGlobalTokens(budget.redis, budget.key, usedTokens)
+    }
+
+    const refusal = completion.choices?.[0]?.message?.refusal
+    if (refusal) {
+      return NextResponse.json(
+        { error: `OpenAI refused course generation: ${refusal}` },
+        { status: 500 }
+      )
+    }
 
     let raw = completion.choices?.[0]?.message?.content || ""
     raw = raw.trim()
@@ -99,21 +163,34 @@ export async function POST(req: Request) {
       )
     }
 
-    // keep your simple metrics
+    if (safeExistingModules.length > 0) {
+      const offset = safeExistingModules.length
+      plan.modules = plan.modules.map((module, index) => ({
+        ...module,
+        id: `module-${offset + index + 1}`,
+      }))
+    }
+
     try {
-      const redis = getRedis()
-      if (redis) {
-        await redis.incr("metrics:prompts")
-      }
+      await logSiteMetricEvent({
+        metricKey: "prompt",
+        metadata: {
+          source: "legacy_generate_route",
+          hobby,
+          level: userLevel,
+          language: lang,
+          existingModules: safeExistingModules.length,
+        },
+      })
     } catch (metricsErr) {
-      console.error("Failed to increment metrics:prompts", metricsErr)
+      console.error("Failed to log prompt metric", metricsErr)
     }
 
     return NextResponse.json({ plan })
   } catch (err) {
     console.error(err)
     return NextResponse.json(
-      { error: "Something went wrong generating the plan." },
+      { error: "Something went wrong generating the path." },
       { status: 500 }
     )
   }

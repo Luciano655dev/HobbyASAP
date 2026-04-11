@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-app: "Nunito", "Avenir Next", "Avenir", "Segoe UI", "Inter", sans-serif;
+  --app-bg: #f7f9fc;
+  --surface: #ffffff;
+  --surface-2: #f1f4fb;
+  --border: #e2e8f3;
+
+  --text: #0e1324;
+  --muted: #667089;
+
+  /* Core AI accent */
+  --accent: #6366f1; /* Indigo */
+  --accent-strong: #4f46e5;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+
+  /* Feedback */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* Glassy header feel */
+  --header-overlay-from: rgba(255, 255, 255, 0.55);
+  --header-overlay-to: rgba(255, 255, 255, 0.85);
+
+  color-scheme: light;
 }
 
+
+[data-theme="dark"] {
+  --app-bg: #070a14;
+  --surface: #0d1224;
+  --surface-2: #0b1020;
+  --border: #1a2140;
+
+  --text: #eef1ff;
+  --muted: #a0acd6;
+
+  /* AI accent – confident, not neon */
+  --accent: #818cf8;
+  --accent-strong: #6366f1;
+  --accent-soft: rgba(129, 140, 248, 0.18);
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+
+  /* Subtle depth, glass + blur works beautifully */
+  --header-overlay-from: rgba(7, 10, 20, 0.7);
+  --header-overlay-to: rgba(7, 10, 20, 0.9);
+
+  color-scheme: dark;
+}
+
+
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-app-bg: var(--app-bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-app);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--app-bg);
+  color: var(--text);
+  font-family: var(--font-app), "Avenir", "Segoe UI", sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+button:not([disabled]),
+a,
+[role="button"] {
+  cursor: pointer;
+}
+
+button[disabled],
+[aria-disabled="true"] {
+  cursor: not-allowed;
 }

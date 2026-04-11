@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 
 export interface Metrics {
-  prompts: number
+  lessons: number
   users: number
 }
 
@@ -15,7 +15,10 @@ export function useMetrics() {
 
     async function fetchMetrics() {
       try {
-        const res = await fetch("/api/metrics", { method: "GET" })
+        const res = await fetch("/api/metrics", {
+          method: "GET",
+          cache: "no-store",
+        })
         if (!res.ok) {
           throw new Error("Failed to load metrics")
         }
@@ -34,9 +37,11 @@ export function useMetrics() {
     }
 
     fetchMetrics()
+    const intervalId = window.setInterval(fetchMetrics, 30_000)
 
     return () => {
       cancelled = true
+      window.clearInterval(intervalId)
     }
   }, [])
 

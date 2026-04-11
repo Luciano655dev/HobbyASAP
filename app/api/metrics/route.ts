@@ -1,57 +1,53 @@
 import { NextResponse } from "next/server"
-import { getRedis } from "@/app/lib/redis"
+import { getSiteMetrics, logSiteMetricEvent } from "@/app/lib/siteMetrics"
 
 type MetricsBody = {
-  type: "prompt" | "newUser"
+  type: "prompt" | "new_user" | "newUser"
+  userId?: string
 }
 
-// POST → increment counters
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as MetricsBody
-    const redis = getRedis()
+    const metricKey = body.type === "newUser" ? "new_user" : body.type
 
-    if (!redis) {
-      // dev mode with no REDIS_URL
-      return NextResponse.json({ ok: true, redisDisabled: true })
+    if (metricKey === "prompt" || metricKey === "new_user") {
+      await logSiteMetricEvent({
+        metricKey,
+        userId: typeof body.userId === "string" ? body.userId : null,
+        metadata: {
+          source: "api_metrics_post",
+        },
+      })
     }
 
-    if (body.type === "prompt") {
-      await redis.incr("metrics:prompts")
-    }
-
-    if (body.type === "newUser") {
-      await redis.incr("metrics:users")
-    }
-
-    return NextResponse.json({ ok: true })
+    return NextResponse.json(
+      { ok: true },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
+    )
   } catch (err) {
     console.error("Metrics POST error", err)
     return NextResponse.json({ ok: false }, { status: 500 })
   }
 }
 
-// GET → return counters
 export async function GET() {
   try {
-    const redis = getRedis()
+    const metrics = await getSiteMetrics()
 
-    if (!redis) {
-      return NextResponse.json({
-        prompts: 0,
-        users: 0,
-        redisDisabled: true,
-      })
-    }
-
-    const prompts = Number((await redis.get("metrics:prompts")) ?? 0)
-    const users = Number((await redis.get("metrics:users")) ?? 0)
-
-    return NextResponse.json({ prompts, users })
+    return NextResponse.json(metrics, {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    })
   } catch (err) {
     console.error("Metrics GET error", err)
     return NextResponse.json(
-      { prompts: 0, users: 0, error: "Failed to load metrics" },
+      { lessons: 0, users: 0, error: "Failed to load metrics" },
       { status: 500 }
     )
   }

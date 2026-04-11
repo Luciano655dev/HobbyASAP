@@ -68,18 +68,18 @@ export default function Hero({ streak, xpStats }: HeroProps) {
     >
       <motion.h1
         variants={titleVariants}
-        className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-3 tracking-tight text-slate-50 bg-gradient-to-r from-lime-300 to-sky-300 bg-clip-text text-transparent"
+        className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-3 tracking-tight text-text bg-gradient-to-r from-accent-strong to-accent bg-clip-text text-transparent"
       >
         HobbyASAP
       </motion.h1>
 
       <motion.p
         variants={subtitleVariants}
-        className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto"
+        className="text-sm sm:text-base text-muted max-w-2xl mx-auto"
       >
-        Type any hobby and let the AI design a custom layout: intros, small
-        tasks, checklists, roadmaps, resources, plus persistent masterclasses,
-        deep dives and the possibility of asking questions.
+        Type any hobby and let the AI design a custom learning path with
+        read-and-quiz modules, persistent deep dives, and the ability to ask
+        questions as you go.
       </motion.p>
 
       <motion.div
@@ -89,17 +89,17 @@ export default function Hero({ streak, xpStats }: HeroProps) {
         {/* Streak */}
         <motion.div
           variants={statCardVariants}
-          className="inline-flex items-center gap-2 rounded-2xl border border-orange-400/70 bg-slate-900/80 px-5 py-2 shadow-sm"
+          className="inline-flex items-center gap-2 rounded-2xl border border-warning/50 bg-surface/80 px-5 py-2 shadow-sm"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-400/20 text-sm">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning/20 text-sm">
             🔥
           </div>
           <div className="flex flex-col leading-tight">
             <div className="flex items-baseline gap-1">
-              <span className="text-sm font-semibold text-orange-100">
+              <span className="text-sm font-semibold text-warning">
                 {streak.current}
               </span>
-              <span className="text-[10px] text-orange-200/80">
+              <span className="text-[10px] text-warning/80">
                 max {streak.longest}
               </span>
             </div>
@@ -109,22 +109,22 @@ export default function Hero({ streak, xpStats }: HeroProps) {
         {/* Level + XP (global) */}
         <motion.div
           variants={statCardVariants}
-          className="inline-flex items-center gap-3 rounded-2xl border border-emerald-400/70 bg-slate-900/80 px-5 py-2 shadow-sm"
+          className="inline-flex items-center gap-3 rounded-2xl border border-accent/50 bg-surface/80 px-5 py-2 shadow-sm"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-300 to-sky-300 text-xs font-bold text-slate-900">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white">
             {xpStats.levelNumber}
           </div>
           <div className="space-y-0.5">
-            <p className="text-xs font-semibold text-emerald-100">
+            <p className="text-xs font-semibold text-accent">
               {xpStats.levelLabel}
             </p>
-            <div className="flex items-center gap-2 text-[10px] text-emerald-100/90">
+            <div className="flex items-center gap-2 text-[10px] text-accent/90">
               <span>
                 {xpStats.xpInLevel}/{xpStats.xpForNextLevel} XP
               </span>
-              <div className="h-1.5 w-20 rounded-full bg-slate-800">
+              <div className="h-1.5 w-20 rounded-full bg-surface-2">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-sky-300"
+                  className="h-full rounded-full bg-gradient-to-r from-accent to-accent-strong"
                   style={{
                     width: `${xpStats.levelProgressPercent}%`,
                   }}

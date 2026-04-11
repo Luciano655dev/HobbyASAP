@@ -1,8 +1,11 @@
 // app/components/HistoryPanel.tsx
 "use client"
 
+import { useState } from "react"
 import { motion } from "framer-motion"
+import { Calendar, Flame, Play, Trash2 } from "lucide-react"
 import { SavedSession } from "../hooks/useSessionsHistory"
+import ConfirmModal from "./ConfirmModal"
 
 interface HistoryPanelProps {
   history: SavedSession[]
@@ -17,85 +20,148 @@ export default function HistoryPanel({
   onDelete,
   onLoad,
 }: HistoryPanelProps) {
+  const [confirmState, setConfirmState] = useState<
+    | { type: "clear-all" }
+    | { type: "delete-course"; sessionId: string; hobby: string }
+    | null
+  >(null)
+
+  function closeConfirm() {
+    setConfirmState(null)
+  }
+
+  function handleConfirmAction() {
+    if (!confirmState) return
+    if (confirmState.type === "clear-all") {
+      onClearAll()
+      closeConfirm()
+      return
+    }
+    onDelete(confirmState.sessionId)
+    closeConfirm()
+  }
+
   return (
     <motion.div
-      className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md"
+      className="bg-surface/90 border border-border rounded-2xl p-5 sm:p-6 shadow-sm"
       initial={{ opacity: 0, y: 10, scale: 0.99 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm sm:text-base font-semibold text-slate-50">
-          Saved runs
-        </h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm sm:text-base font-semibold text-text">Saved runs</h2>
         {history.length > 0 && (
           <button
             type="button"
-            onClick={onClearAll}
-            className="text-[11px] text-slate-500 hover:text-red-400"
+            onClick={() => setConfirmState({ type: "clear-all" })}
+            className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-2 px-2.5 py-1 text-[11px] text-muted hover:text-danger"
           >
+            <Trash2 className="h-3.5 w-3.5" />
             Clear all
           </button>
         )}
       </div>
 
       {history.length === 0 ? (
-        <p className="text-xs sm:text-sm text-slate-400">
-          When you generate a plan and start working on it, HobbyASAP will
-          remember your streak, XP, tasks, lessons and questions as a “run” you
-          can reload later.
+        <p className="text-xs sm:text-sm text-muted">
+          When you generate a path and start working on it, HobbyASAP will
+          remember your streak, XP, modules, lessons and questions as a “run”
+          you can reload later.
         </p>
       ) : (
-        <div className="max-h-64 overflow-y-auto pr-1">
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="max-h-[30rem] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {history.map((session) => (
               <div
                 key={session.id}
-                className="group flex flex-col gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-xs sm:text-sm hover:border-emerald-400 hover:bg-slate-900 cursor-pointer transition-colors"
-                onClick={() => onLoad(session)}
+                className="group rounded-2xl border border-border bg-surface p-3 shadow-sm transition hover:border-accent/50 hover:shadow"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-xl bg-slate-900 flex items-center justify-center text-lg">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface-2 text-lg">
                       {session.icon || "⭐"}
                     </div>
                     <div>
-                      <p className="font-medium text-slate-50">
-                        {session.hobby}
-                      </p>
-                      <p className="text-[11px] text-slate-400">
-                        {session.level}
-                      </p>
+                      <p className="text-sm font-semibold text-text">{session.hobby}</p>
+                      <p className="text-[11px] text-muted">{session.level}</p>
                     </div>
                   </div>
                   <button
                     type="button"
-                    className="text-[11px] text-slate-500 hover:text-red-400"
+                    className="rounded-md p-1 text-muted hover:bg-danger/10 hover:text-danger"
                     onClick={(e) => {
                       e.stopPropagation()
-                      onDelete(session.id)
+                      setConfirmState({
+                        type: "delete-course",
+                        sessionId: session.id,
+                        hobby: session.hobby,
+                      })
                     }}
+                    aria-label={`Delete ${session.hobby}`}
                   >
-                    ✕
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="flex items-center justify-between text-[10px] text-slate-500">
-                  <span className="flex items-center justify-center">
-                    🔥{" "}
-                    <strong className="text-base px-1">
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-border bg-surface-2 px-2 py-1.5 text-[11px] text-muted">
+                    <p className="inline-flex items-center gap-1">
+                      <Flame className="h-3.5 w-3.5 text-muted" />
+                      Streak
+                    </p>
+                    <p className="mt-0.5 text-sm font-semibold text-text">
                       {session.streak.current}
-                    </strong>{" "}
-                    (best {session.streak.longest})
-                  </span>
-                  <span>
+                      <span className="ml-1 text-[10px] font-normal text-muted">
+                        (best {session.streak.longest})
+                      </span>
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-surface-2 px-2 py-1.5 text-[11px] text-muted">
+                    <p>Modules</p>
+                    <p className="mt-0.5 text-sm font-semibold text-text">
+                      {session.completedTaskIds.filter((id) =>
+                        session.plan.modules.some((m) => m.id === id)
+                      ).length}
+                      <span className="ml-1 text-[10px] font-normal text-muted">
+                        /{session.plan.modules.length}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="inline-flex items-center gap-1 text-[11px] text-muted">
+                    <Calendar className="h-3.5 w-3.5" />
                     {new Date(session.createdAt).toLocaleDateString()}
-                  </span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onLoad(session)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-accent-strong px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-accent"
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    Open
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!confirmState}
+        title="Confirm delete"
+        message={
+          confirmState?.type === "clear-all"
+            ? "Are you sure you want to delete all saved courses?"
+            : `Are you sure you want to delete the course \"${confirmState?.hobby}\"?`
+        }
+        confirmLabel="Delete"
+        danger
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirm}
+      />
     </motion.div>
   )
 }
