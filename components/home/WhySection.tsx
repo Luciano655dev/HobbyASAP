@@ -1,69 +1,10 @@
-"use client"
-
-import { motion, type Variants } from "framer-motion"
 import type React from "react"
-
-const sectionVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: [0.16, 1, 0.3, 1],
-    },
-  },
-}
-
-const gridVariants: Variants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.12,
-      delayChildren: 0.1,
-    },
-  },
-}
-
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 18, scale: 0.97 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      duration: 0.35,
-      ease: "easeOut",
-    },
-  },
-}
-
-const whyItemVariants: Variants = {
-  hidden: { opacity: 0, x: -8 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.25, ease: "easeOut" },
-  },
-}
 
 export default function WhySection() {
   return (
-    <motion.section
-      className="mx-auto max-w-6xl px-4 pb-14 sm:pb-18"
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.3 }}
-      variants={sectionVariants}
-    >
-      <motion.div
-        className="grid gap-6 md:grid-cols-[1.4fr,1fr]"
-        variants={gridVariants}
-      >
-        <motion.div
-          className="rounded-3xl border border-white/10 bg-slate-950/85 p-4 sm:p-5"
-          variants={cardVariants}
-        >
+    <section className="mx-auto max-w-6xl px-4 pb-14 sm:pb-18">
+      <div className="grid gap-6 md:grid-cols-[1.4fr,1fr]">
+        <div className="rounded-3xl border border-white/10 bg-slate-950/85 p-4 sm:p-5">
           <h2 className="mb-2 text-xl font-semibold">
             Why not just bounce between tutorials
           </h2>
@@ -88,57 +29,52 @@ export default function WhySection() {
               A Q and A coach that remembers your roadmap and previous answers.
             </WhyItem>
           </ul>
-        </motion.div>
+        </div>
 
-        <motion.div
-          className="flex flex-col justify-between gap-4 rounded-3xl border border-white/10 bg-slate-950/85 p-4 sm:p-5"
-          variants={cardVariants}
-        >
+        <div className="flex flex-col justify-between gap-4 rounded-3xl border border-white/10 bg-slate-950/85 p-4 sm:p-5">
           <div>
             <p className="mb-2 text-[11px] uppercase tracking-wide text-slate-400">
               Made for <strong>real learners</strong>
             </p>
 
-            <div className="border-l-4 border-slate-700 pl-3 py-1 mb-2">
-              <p className="text-sm text-slate-200 italic mb-1">
+            <div className="mb-2 border-l-4 border-slate-700 py-1 pl-3">
+              <p className="mb-1 text-sm italic text-slate-200">
                 “I'm not paying a new course for every skill that I want to
                 learn. This app is saving me!”
               </p>
               <p className="text-xs text-slate-400">
-                — Luciano Menezes, Daykeeper CEO
+                Luciano Menezes, Daykeeper CEO
               </p>
             </div>
-            <div className="border-l-4 border-slate-700 pl-3 py-1">
-              <p className="text-sm text-slate-200 italic mb-1">
+            <div className="border-l-4 border-slate-700 py-1 pl-3">
+              <p className="mb-1 text-sm italic text-slate-200">
                 “This app is awesome! I'm using It everyday! And the developer
                 is a cutie :)”
               </p>
               <p className="text-xs text-slate-400">
-                — Sofia Jordão, My Girlfriend :)
+                Sofia Jordão, My Girlfriend :)
               </p>
             </div>
           </div>
 
           <div className="rounded-2xl border border-lime-300/60 bg-lime-300/10 p-3 text-xs text-lime-100">
-            <p className="mb-1 font-semibold">
-              Experimental and open to change
-            </p>
+            <p className="mb-1 font-semibold">Experimental and open to change</p>
             <p>
               HobbyASAP is still a prototype built by one person. Expect new
               ideas, improvements and some chaos while it grows.
             </p>
           </div>
-        </motion.div>
-      </motion.div>
-    </motion.section>
+        </div>
+      </div>
+    </section>
   )
 }
 
 function WhyItem({ children }: { children: React.ReactNode }) {
   return (
-    <motion.li className="flex gap-2" variants={whyItemVariants}>
+    <li className="flex gap-2">
       <span className="mt-0.5 text-lime-300">✓</span>
       <span>{children}</span>
-    </motion.li>
+    </li>
   )
 }
